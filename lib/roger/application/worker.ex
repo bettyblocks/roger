@@ -20,7 +20,7 @@ defmodule Roger.Application.Worker do
   ## Server interface
 
   defmodule State do
-    defstruct application: nil, job: nil, meta: nil, raw_payload: nil
+    defstruct application: nil, meta: nil, raw_payload: nil
   end
 
   def init([application, payload, meta]) do
@@ -30,32 +30,29 @@ defmodule Roger.Application.Worker do
 
   def handle_info(:timeout, state) do
     meta = state.meta
-    try do
-      execute_job(state) # FIXME what to do with the return value?
-      ack(meta, state)
-    catch
-      t, e ->
-        Logger.error "Execution error: #{t}:#{inspect e}"
-      # IO.inspect(System.stacktrace)
-      nack(meta, state)
+    case Job.decode(state.raw_payload) do
+      {:ok, job} ->
+        before_run_state = callback(:before_run, [state.application, job])
+        try do
+          # FIXME do anything with the return value?
+          result = Job.execute(job)
+          ack(meta, state)
+
+          callback(:after_run, [state.application, job, result, before_run_state])
+        catch
+          t, e ->
+            Logger.warn "Execution error: #{t}:#{inspect e}"
+            # retry?
+            nack(meta, state)
+
+            callback(:on_error, [state.application, job, {t, e}, before_run_state])
+        end
+      {:error, message} ->
+        # Decode error
+        Logger.debug "JSON decoding error: #{inspect message}"
+        ack(meta, state)
     end
     {:stop, :normal, state}
-  end
-
-  defp execute_job(state) do
-    case Poison.decode(state.raw_payload, as: %Job{}) do
-      {:ok, job} ->
-
-        module = String.to_existing_atom(job.module)
-
-        Logger.metadata(job: job.id)
-
-        result = Kernel.apply(module, :perform, job.args)
-
-        result
-      {:error, _} = e ->
-        raise RuntimeError, "Error deserializing job: #{inspect e}"
-    end
   end
 
   defp ack(nil, _state), do: nil
@@ -66,6 +63,13 @@ defmodule Roger.Application.Worker do
   defp nack(nil, _state), do: nil
   defp nack(meta, state) do
     Consumer.nack(state.application, meta.consumer_tag, meta.delivery_tag)
+  end
+
+  defp callback(callback, args) do
+    mod = Application.get_env(:roger, :callbacks)[:worker]
+    if mod != nil do
+      Kernel.apply(mod, callback, args)
+    end
   end
 
 end

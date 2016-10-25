@@ -8,7 +8,8 @@ Roger: multi tenant job processor
 - pausing / unpausing work queues
 nice to have:
 - retry w/ exponential backoff
-- HTTP management API (phoenix mountable)
+- Management API (phoenix mountable); return info from each node (rabbitmq pubsub?)
+
 
 
 
@@ -16,7 +17,6 @@ nice to have:
 application logic callback modules
 
 worker callback
-- worker: init
 - worker: pre execution (job, state)
 - worker: post execution (job, result, state)
 - worker: on error (job, exception, state)

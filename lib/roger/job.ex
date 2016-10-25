@@ -1,41 +1,38 @@
 defmodule Roger.Job do
 
-  @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key cancel_key)a}
-  defstruct id: nil, module: nil, args: [], queue_key: nil, execution_key: nil, cancel_key: nil
+  @type t :: %__MODULE__{}
 
-  alias Roger.Queue
+  @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key cancel_key)a}
+  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, cancel_key: nil
+
+  alias Roger.{Application,Queue}
 
   require Logger
 
   @queue_types ~w(default dependent expression)a
 
+  @doc """
+  Enqueues a job in the given application.
+  """
+  def enqueue(%__MODULE__{} = job, %Application{} = application) do
+    queue = Queue.make_name(application, queue_type(job))
 
-  # @doc """
-  # Publishes a job to the given channel type. Assumes a valid checkout.
-  # """
-  # def enqueue!(%__MODULE__{} = job, type \\ :default) when is_atom(type) do
-  #   job = ensure_job_id(job)
-  #   validate!(job)
-  #   Enum.member?(@queue_types, type) || raise RuntimeError, "Invalid queue type: #{type}"
+    opts = [
+      content_type: "application/json",
+      persistent: true,
+      message_id: job.id,
+      app_id: application.id
+    ]
 
-  #   application = RunEnv.fetch!.record
-  #   queue = Queue.name(application, type)
+    payload = Poison.encode!(job)
+    Roger.AMQPClient.publish("", queue, payload, opts)
+  end
 
-  #   opts = [
-  #     content_type: "application/json",
-  #     persistent: true,
-  #     message_id: job.id,
-  #     app_id: application.id
-  #   ]
 
-  #   payload = Poison.encode!(job)
-  #   Betty.AMQPClient.publish("", queue, payload, opts)
-  # end
-
-  # defp ensure_job_id(%__MODULE__{id: nil} = job) do
-  #   %{job | id: Betty.EctoType.UUID.generate()}
-  # end
-  # defp ensure_job_id(%__MODULE__{} = job), do: job
+  defp ensure_job_id(%__MODULE__{id: nil} = job) do
+    %{job | id: Betty.EctoType.UUID.generate()}
+  end
+  defp ensure_job_id(%__MODULE__{} = job), do: job
 
   defmacro __using__(_) do
 
@@ -44,11 +41,12 @@ defmodule Roger.Job do
       def queue_key(_args), do: nil
       def execution_key(_args), do: nil
       def cancel_key(_args), do: nil
+      def queue_type(_args), do: :default
 
-      defoverridable queue_key: 1, execution_key: 1, cancel_key: 1
+      defoverridable queue_key: 1, execution_key: 1, cancel_key: 1, queue_type: 1
 
       def perform(_args) do
-        raise RuntimeError, "FIXME: implement #{unquote(__MODULE__)}.perform/1"
+        raise RuntimeError, "FIXME: implement #{unquote(__CALLER__.module)}.perform/1"
       end
       defoverridable perform: 1
     end
@@ -72,7 +70,7 @@ defmodule Roger.Job do
 
 
   def execute(%__MODULE__{} = job) do
-    Kernel.apply(job.module, :perform, job.args)
+    Kernel.apply(job.module, :perform, [job.args])
   end
 
   def decode(payload) do
@@ -96,12 +94,12 @@ defmodule Roger.Job do
     end
   end
 
-  defp validate(%__MODULE__{args: args} = job) when not(is_list(args)) do
-    {:error, "Job arguments must be a list"}
-  end
-
   defp validate(%__MODULE__{} = job) do
     {:ok, job}
+  end
+
+  def queue_type(%__MODULE__{} = job) do
+    job.module.queue_type(job.args)
   end
 
 end

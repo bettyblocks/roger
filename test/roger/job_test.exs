@@ -8,7 +8,7 @@ defmodule Roger.JobTest do
   defmodule SquareJob do
     use Roger.Job
 
-    def perform(num) do
+    def perform([num]) do
       num * num
     end
 
@@ -26,7 +26,7 @@ defmodule Roger.JobTest do
   defmodule QueueKeyJob do
     use Roger.Job
 
-    def perform(num) do
+    def perform([num]) do
       num * num
     end
 

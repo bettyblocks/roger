@@ -25,10 +25,6 @@ defmodule Roger.ApplicationTest do
   test "start application" do
     app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
     {:ok, _} = Application.start(app)
-
-    # Check whether application consumer is alive
-    assert Roger.Application.Consumer.is_alive?(app)
-    :timer.sleep(100)
   end
 
   test "start application is re-entrant" do

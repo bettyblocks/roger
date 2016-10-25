@@ -21,7 +21,9 @@ defmodule Roger.Application do
     # start application supervision tree
     case Roger.ApplicationSupervisor.start_child(application) do
       {:ok, pid} -> {:ok, pid}
-      {:error, {:already_started, pid}} -> {:ok, pid}
+      {:error, {:already_started, pid}} ->
+        :ok = Roger.Application.Consumer.reconfigure(application)
+        {:ok, pid}
     end
   end
 

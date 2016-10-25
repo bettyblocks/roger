@@ -2,27 +2,35 @@ defmodule Roger.WorkerTest do
   use ExUnit.Case
   #doctest Roger.Worker
 
-  alias Roger.{Application, Queue, Application.Worker, Application.WorkerSupervisor}
-
-  # defmodule TestWorkerCallback do
-  #   use Roger.Worker.Callback
-  # end
+  alias Roger.{Application, Queue, Application.WorkerSupervisor}
 
   setup do
-    Elixir.Application.put_env(:roger, :callbacks, worker: TestWorkerCallback)
     Process.register(self(), :testcase)
 
     app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
-    {:ok, pid} = Application.start(app)
+    {:ok, _pid} = Application.start(app)
 
     {:ok, %{app: app}}
   end
 
+
+  defmodule TestJob do
+    use Roger.Job
+
+    def perform([]) do
+      send(:testcase, :job_ok)
+    end
+
+  end
+
+  @payload ~s({"id": "123", "module": "Elixir.Roger.WorkerTest.TestJob", "args": []})
+
   test "start worker in application worker supervisor", %{app: app} do
-
-    {:ok, _pid} = WorkerSupervisor.start_child(app, "payload", nil)
-
-    :timer.sleep 500
-
+    {:ok, _pid} = WorkerSupervisor.start_child(app, @payload, nil)
+    receive do
+      :job_ok -> :ok
+    after 1000 ->
+        flunk("Job not processed :-S")
+    end
   end
 end
