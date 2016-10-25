@@ -41,8 +41,8 @@ defmodule Roger.Application.Worker do
           callback(:after_run, [state.application, job, result, before_run_state])
         catch
           t, e ->
-            Logger.warn "Execution error: #{t}:#{inspect e}"
-            # retry?
+            #Logger.warn "Execution error: #{t}:#{inspect e}"
+            # FIXME: retry?
             nack(meta, state)
 
             callback(:on_error, [state.application, job, {t, e}, before_run_state])

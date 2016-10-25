@@ -17,24 +17,20 @@ defmodule Roger.Application.ConsumerTest do
 
     [queue] = Consumer.get_queues(app)
 
-    IO.puts "queue: #{inspect queue}"
-
     assert 10 = queue.max_workers
 
     app = Map.put(app, :queues, [%{queue | max_workers: 20}, Queue.define(:fast, 40)])
     :ok = Consumer.reconfigure(app)
 
-    qs = [default, fast] = Consumer.get_queues(app)
+    [default, fast] = Consumer.get_queues(app)
 
     assert 20 = default.max_workers
     assert 40 = fast.max_workers
 
-    IO.puts ":aaaaaaaaaaaaaaaaaaaa: #{inspect :aaaaaaaaaaaaaaaaaaaa}"
-
     app = Map.put(app, :queues, [Queue.define(:fast, 10)])
     :ok = Consumer.reconfigure(app)
 
-    qs = [fast] = Consumer.get_queues(app)
+    [fast] = Consumer.get_queues(app)
     assert 10 = fast.max_workers
 
   end

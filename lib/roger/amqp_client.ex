@@ -1,6 +1,8 @@
 defmodule Roger.AMQPClient do
   require Logger
 
+  use AMQP
+
   use GenServer
 
   def start_link(config) do
@@ -26,14 +28,14 @@ defmodule Roger.AMQPClient do
   end
 
   def handle_call({:publish, exchange, routing_key, payload, opts}, _from, state) do
-    reply = AMQP.Basic.publish(state.send_channel, exchange, routing_key, payload, opts)
+    reply = Basic.publish(state.send_channel, exchange, routing_key, payload, opts)
     {:reply, reply, state}
   end
 
   def handle_call(:open_channel, _from, state) do
     # FIXME what if we're not connected?
     # FIXME limit the nr of channels?
-    reply = {:ok, _} = AMQP.Channel.open(state.connection)
+    reply = {:ok, _} = Channel.open(state.connection)
     {:reply, reply, state}
   end
 
@@ -48,9 +50,9 @@ defmodule Roger.AMQPClient do
   end
 
   defp reconnect(state) do
-    case AMQP.Connection.open(state.config) do
+    case Connection.open(state.config) do
       {:ok, connection} ->
-        {:ok, send_channel} = AMQP.Channel.open(connection)
+        {:ok, send_channel} = Channel.open(connection)
         %State{state | connection: connection, send_channel: send_channel}
       {:error, _} = e ->
         Logger.warn "AMQP error: #{inspect e}"

@@ -29,11 +29,6 @@ defmodule Roger.Job do
   end
 
 
-  defp ensure_job_id(%__MODULE__{id: nil} = job) do
-    %{job | id: Betty.EctoType.UUID.generate()}
-  end
-  defp ensure_job_id(%__MODULE__{} = job), do: job
-
   defmacro __using__(_) do
 
     quote do
@@ -81,7 +76,7 @@ defmodule Roger.Job do
   defp validate({:ok, job}), do: validate(job)
   defp validate({:error, _} = e), do: e
 
-  defp validate(%__MODULE__{id: id} = job) when not(is_binary(id)) do
+  defp validate(%__MODULE__{id: id}) when not(is_binary(id)) do
     {:error, "Job id must be set"}
   end
 

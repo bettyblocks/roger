@@ -2,6 +2,8 @@ defmodule Roger do
 
   use Application
 
+  require Logger
+
   def start(_, _) do
     import Supervisor.Spec, warn: false
 
@@ -15,5 +17,6 @@ defmodule Roger do
     opts = [strategy: :one_for_one, name: Roger.Supervisor]
     Supervisor.start_link(children, opts)
   end
+
 
 end

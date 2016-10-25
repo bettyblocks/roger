@@ -1,4 +1,4 @@
-defmodule Roger.WorkerCallbacksTest do
+defmodule Roger.Worker.CallbacksTest do
   use ExUnit.Case
   #doctest Roger.Worker
 
@@ -7,9 +7,12 @@ defmodule Roger.WorkerCallbacksTest do
   setup do
     Process.register(self(), :testcase)
 
-    app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
-    {:ok, pid} = Application.start(app)
+    on_exit fn ->
+      Elixir.Application.put_env(:roger, :callbacks, [])
+    end
 
+    app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
+    {:ok, _} = Application.start(app)
     {:ok, %{app: app}}
   end
 
@@ -64,17 +67,20 @@ defmodule Roger.WorkerCallbacksTest do
     end
   end
 
-
+  @ref :erlang.term_to_binary(make_ref())
+  def test_ref do
+    @ref
+  end
 
   defmodule BeforeAfterRunWorkerCallback do
     use Roger.Application.Worker.Callback
 
     def before_run(_app, _job) do
-      {123}
+      Roger.WorkerCallbacksTest.test_ref
     end
 
-    def after_run(_app, _job, _result, state) do
-      result = nil # assertion
+    def after_run(_app, _job, result, state) do
+      ^result = nil # assertion
       send(:testcase, {:after_run_ok, state})
     end
   end
@@ -84,15 +90,14 @@ defmodule Roger.WorkerCallbacksTest do
     {:ok, _pid} = WorkerSupervisor.start_child(app, @payload, nil)
     receive do
       {:after_run_ok, r} ->
-        assert {123} == r
+        assert test_ref() == r
         :ok
     after 1000 ->
         flunk("after_run not executed correctly")
     end
   end
 
-
-
+  ##
 
   defmodule ErrorJob do
     use Roger.Job

@@ -89,12 +89,7 @@ defmodule Roger.Application.Consumer do
   end
 
   def handle_info({:basic_deliver, payload, meta}, state) do
-
-    queue = find_queue_by_tag(meta.consumer_tag, state)
-    Logger.warn "Executing job on queue: #{queue.type} (app: #{state.application.id})"
-
     {:ok, _pid} = WorkerSupervisor.start_child(state.application, payload, meta)
-
     {:noreply, state}
   end
 
@@ -126,7 +121,6 @@ defmodule Roger.Application.Consumer do
     MapSet.difference(existing_queue_types, new_queue_types)
     |> pick.(state.queues)
     |> Enum.each(fn(q) ->
-      IO.puts "closing: #{inspect q.consumer_tag} #{inspect q.type}"
       {:ok, _} = AMQP.Basic.cancel(q.channel, q.consumer_tag)
       :ok = AMQP.Channel.close(q.channel)
     end)
