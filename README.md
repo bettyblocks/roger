@@ -6,6 +6,20 @@
 
 **TODO: Add description**
 
+## Feature checklist
+
+- [x] Multi-tentant architecture
+- [x] based on Rabbitmq
+- [x] per-queue concurrency control
+- [ ] jobs cancellation
+- [ ] enforce job uniqueness during execution
+- [ ] enforce job uniqueness per queue
+- [ ] pausing / unpausing work queues
+- [ ] retry w/ exponential backoff
+- [ ] Management API (phoenix mountable); return info from each node (rabbitmq pubsub?)
+- [ ] Documentation
+
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
