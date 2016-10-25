@@ -1,4 +1,8 @@
-# Roger
+# Roger: Multi-tenant job processor
+
+[![Build Status](https://travis-ci.org/arjan/decorator.png?branch=master)](https://travis-ci.org/bettyblocks/roger)
+[![Hex pm](http://img.shields.io/hexpm/v/decorator.svg?style=flat)](https://hex.pm/packages/roger)
+
 
 **TODO: Add description**
 
@@ -21,4 +25,3 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
       [applications: [:roger]]
     end
     ```
-

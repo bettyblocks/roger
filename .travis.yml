@@ -1,0 +1,9 @@
+language: elixir
+services:
+  - rabbitmq
+elixir:
+  - 1.3.0
+otp_release:
+  - 19.0
+  - 18.3
+script: MIX_ENV=test mix compile && MIX_ENV=test mix test
