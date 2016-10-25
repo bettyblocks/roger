@@ -27,7 +27,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
 
-  @payload ~s({"id": "123", "module": "Elixir.Roger.WorkerCallbacksTest.TestJob", "args": []})
+  @payload ~s({"id": "123", "module": "Elixir.Roger.Worker.CallbacksTest.TestJob", "args": []})
 
   defmodule BeforeRunWorkerCallback do
     use Roger.Application.Worker.Callback
@@ -76,7 +76,7 @@ defmodule Roger.Worker.CallbacksTest do
     use Roger.Application.Worker.Callback
 
     def before_run(_app, _job) do
-      Roger.WorkerCallbacksTest.test_ref
+      Roger.Worker.CallbacksTest.test_ref
     end
 
     def after_run(_app, _job, result, state) do
@@ -112,7 +112,7 @@ defmodule Roger.Worker.CallbacksTest do
     end
   end
 
-  @payload ~s({"id": "123", "module": "Elixir.Roger.WorkerCallbacksTest.ErrorJob", "args": []})
+  @payload ~s({"id": "123", "module": "Elixir.Roger.Worker.CallbacksTest.ErrorJob", "args": []})
 
   test "test on_error worker callback", %{app: app} do
     Elixir.Application.put_env(:roger, :callbacks, worker: OnErrorWorkerCallback)
