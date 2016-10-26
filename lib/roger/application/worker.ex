@@ -36,11 +36,15 @@ defmodule Roger.Application.Worker do
     meta = state.meta
     case Job.decode(state.raw_payload) do
       {:ok, job} ->
-        if StateManager.is_cancelled?(state.application, job.id, :remove) do
+        if job.queue_key != nil do
+          :ok = StateManager.remove_queued(state.application, job.queue_key)
+        end
+
+        if StateManager.cancelled?(state.application, job.id, :remove) do
           callback(:on_cancel, [state.application, job])
           ack(meta, state)
         else
-          GProc.reg(name(job.id))
+          GProc.regp(name(job.id))
           before_run_state = callback(:before_run, [state.application, job])
           try do
             # FIXME do anything with the return value?

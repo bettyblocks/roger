@@ -26,13 +26,13 @@ defmodule Roger.Job.CancelTest do
     assert :ok = StateManager.cancel_job(app, job.id)
 
     # When calling is_cancelled, state is not touched
-    assert true == StateManager.is_cancelled?(app, job.id)
-    assert true == StateManager.is_cancelled?(app, job.id)
+    assert true == StateManager.cancelled?(app, job.id)
+    assert true == StateManager.cancelled?(app, job.id)
 
     # When called with :remove option, the id is removed from the
     # cancel set
-    assert true == StateManager.is_cancelled?(app, job.id, :remove)
-    assert false == StateManager.is_cancelled?(app, job.id, :remove)
+    assert true == StateManager.cancelled?(app, job.id, :remove)
+    assert false == StateManager.cancelled?(app, job.id, :remove)
 
   end
 
@@ -69,6 +69,8 @@ defmodule Roger.Job.CancelTest do
     # Wait until it says it's running
     receive do
       :job_running -> :ok
+    after 1000 ->
+        flunk("Job did not start")
     end
 
     # Now cancel it

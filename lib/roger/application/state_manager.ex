@@ -16,8 +16,16 @@ defmodule Roger.Application.StateManager do
     GenServer.call(global_name(application), {:cancel, job_id})
   end
 
-  def is_cancelled?(application, job_id, remove \\ nil) do
+  def cancelled?(application, job_id, remove \\ nil) do
     GenServer.call(global_name(application), {:is_cancelled, job_id, remove})
+  end
+
+  def queued?(application, queue_key, add \\ nil) do
+    GenServer.call(global_name(application), {:is_queued, queue_key, add})
+  end
+
+  def remove_queued(application, queue_key) do
+    GenServer.call(global_name(application), {:remove_queued, queue_key})
   end
 
   defp global_name(%Application{id: id}) do
@@ -28,14 +36,16 @@ defmodule Roger.Application.StateManager do
   ## Server side
 
   defmodule State do
-    defstruct application: nil, cancel_set: nil
+    defstruct application: nil, cancel_set: nil, queue_set: nil
   end
 
   def init([application]) do
     {:ok, cancel_set} = KeySet.start_link
+    {:ok, queue_set} = KeySet.start_link
     state = %State{
       application: application,
-      cancel_set: cancel_set}
+      cancel_set: cancel_set,
+      queue_set: queue_set}
     {:ok, state}
   end
 
@@ -43,8 +53,7 @@ defmodule Roger.Application.StateManager do
     KeySet.add(state.cancel_set, job_id)
 
     # Cancel any running jobs
-    pid = GProc.whereis(Worker.name(job_id))
-    if is_pid(pid) and Process.alive?(pid) do
+    for {pid, _value} <- GProc.find_properties(Worker.name(job_id)) do
       Process.exit(pid, :exit)
     end
 
@@ -56,6 +65,19 @@ defmodule Roger.Application.StateManager do
     if reply and remove == :remove do
       KeySet.remove(state.cancel_set, job_id)
     end
+    {:reply, reply, state}
+  end
+
+  def handle_call({:is_queued, queue_key, add}, _from, state) do
+    reply = KeySet.contains?(state.queue_set, queue_key)
+    if !reply and add == :add do
+      KeySet.add(state.queue_set, queue_key)
+    end
+    {:reply, reply, state}
+  end
+
+  def handle_call({:remove_queued, queue_key}, _from, state) do
+    reply = KeySet.remove(state.queue_set, queue_key)
     {:reply, reply, state}
   end
 

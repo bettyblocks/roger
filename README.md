@@ -11,9 +11,9 @@
 - [x] based on Rabbitmq
 - [x] per-queue concurrency control
 - [x] jobs cancellation (both in the queue and while running)
+- [x] option to enforce per-application job uniqueness
+- [ ] option to enforce job uniqueness during execution
 - [ ] all operations are cluster-aware
-- [ ] enforce job uniqueness during execution
-- [ ] enforce job uniqueness per queue
 - [ ] pausing / unpausing work queues
 - [ ] retry w/ exponential backoff
 - [ ] Management API (phoenix mountable); return info from each node (rabbitmq pubsub?)

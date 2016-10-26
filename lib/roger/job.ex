@@ -1,11 +1,18 @@
 defmodule Roger.Job do
+  @moduledoc """
+  Base module for implementing Roger jobs.
+
+  To start, `use Roger.Job` in your module. The only required callback
+  to implement is the `perform/1` function.
+
+  """
 
   @type t :: %__MODULE__{}
 
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key)a}
   defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil
 
-  alias Roger.{Application,Queue}
+  alias Roger.{Application, Queue, Application.StateManager}
 
   require Logger
 
@@ -17,18 +24,25 @@ defmodule Roger.Job do
   def enqueue(%__MODULE__{} = job, %Application{} = application) do
     queue = Queue.make_name(application, queue_type(job))
 
-    opts = [
-      content_type: "application/json",
-      persistent: true,
-      message_id: job.id,
-      app_id: application.id
-    ]
+    # Check the queue key; when there is a queue key and it is not
+    # queued, immediately add it to the queue key set to prevent
+    # races.
+    if job.queue_key != nil and StateManager.queued?(application, job.queue_key, :add) do
+      {:error, :duplicate}
+    else
+      opts = [
+        content_type: "application/json",
+        persistent: true,
+        message_id: job.id,
+        app_id: application.id
+      ]
 
-    payload = Poison.encode!(job)
-    Roger.AMQPClient.publish("", queue, payload, opts)
+      payload = Poison.encode!(job)
+      Roger.AMQPClient.publish("", queue, payload, opts)
+    end
   end
 
-
+  @doc false
   defmacro __using__(_) do
 
     quote do
