@@ -14,11 +14,11 @@ defmodule Roger.Application.Consumer do
   end
 
   def ack(application, consumer_tag, delivery_tag) do
-    GenServer.call(GProc.via(name(application)), {:ack, consumer_tag, delivery_tag})
+    GenServer.call(GProc.via(name(application)), {:ack_nack, :ack, consumer_tag, delivery_tag})
   end
 
   def nack(application, consumer_tag, delivery_tag) do
-    GenServer.call(GProc.via(name(application)), {:nack, consumer_tag, delivery_tag})
+    GenServer.call(GProc.via(name(application)), {:ack_nack, :nack, consumer_tag, delivery_tag})
   end
 
   def is_alive?(application) do
@@ -49,22 +49,13 @@ defmodule Roger.Application.Consumer do
     {:ok, %State{application: application, context: context}, 0}
   end
 
-  def handle_call({:ack, consumer_tag, delivery_tag}, _from, state) do
+  def handle_call({:ack_nack, ack_or_nack, consumer_tag, delivery_tag}, _from, state) do
     reply = case find_queue_by_tag(consumer_tag, state) do
               nil -> {:error, :channel_not_found}
               q ->
-                AMQP.Basic.ack(q.channel, delivery_tag)
+                Kernel.apply(AMQP.Basic, ack_or_nack, [q.channel, delivery_tag])
             end
     {:reply, reply, state}
-  end
-
-  def handle_call({:nack, consumer_tag, delivery_tag}, _from, state) do
-    reply = case find_queue_by_tag(consumer_tag, state) do
-              nil -> {:error, :channel_not_found}
-              q ->
-                AMQP.Basic.nack(q.channel, delivery_tag)
-            end
-    {:reply, :ok, state}
   end
 
   def handle_call(:get_queues, _from, state) do
