@@ -50,12 +50,20 @@ defmodule Roger.Application.Consumer do
   end
 
   def handle_call({:ack, consumer_tag, delivery_tag}, _from, state) do
-    AMQP.Basic.ack(find_queue_by_tag(consumer_tag, state).channel, delivery_tag)
-    {:reply, :ok, state}
+    reply = case find_queue_by_tag(consumer_tag, state) do
+              nil -> {:error, :channel_not_found}
+              q ->
+                AMQP.Basic.ack(q.channel, delivery_tag)
+            end
+    {:reply, reply, state}
   end
 
   def handle_call({:nack, consumer_tag, delivery_tag}, _from, state) do
-    AMQP.Basic.nack(find_queue_by_tag(consumer_tag, state).channel, delivery_tag)
+    reply = case find_queue_by_tag(consumer_tag, state) do
+              nil -> {:error, :channel_not_found}
+              q ->
+                AMQP.Basic.nack(q.channel, delivery_tag)
+            end
     {:reply, :ok, state}
   end
 

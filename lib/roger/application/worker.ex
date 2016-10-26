@@ -8,13 +8,17 @@ defmodule Roger.Application.Worker do
 
   require Logger
 
-  alias Roger.Job
-  alias Roger.Application.Consumer
+  alias Roger.{Job, GProc}
+  alias Roger.Application.{Consumer, StateManager}
 
   use GenServer
 
   def start_link(application, payload, meta) do
     GenServer.start_link(__MODULE__, [application, payload, meta])
+  end
+
+  def name(job_id) do
+    {:roger_job_worker, job_id}
   end
 
   ## Server interface
@@ -32,20 +36,26 @@ defmodule Roger.Application.Worker do
     meta = state.meta
     case Job.decode(state.raw_payload) do
       {:ok, job} ->
-        before_run_state = callback(:before_run, [state.application, job])
-        try do
-          # FIXME do anything with the return value?
-          result = Job.execute(job)
+        if StateManager.is_cancelled?(state.application, job.id, :remove) do
+          callback(:on_cancel, [state.application, job])
           ack(meta, state)
+        else
+          GProc.reg(name(job.id))
+          before_run_state = callback(:before_run, [state.application, job])
+          try do
+            # FIXME do anything with the return value?
+            result = Job.execute(job)
+            ack(meta, state)
 
-          callback(:after_run, [state.application, job, result, before_run_state])
-        catch
-          t, e ->
-            #Logger.warn "Execution error: #{t}:#{inspect e}"
-            # FIXME: retry?
-            nack(meta, state)
+            callback(:after_run, [state.application, job, result, before_run_state])
+          catch
+            t, e ->
+              #Logger.warn "Execution error: #{t}:#{inspect e}"
+              # FIXME: retry?
+              nack(meta, state)
 
             callback(:on_error, [state.application, job, {t, e}, before_run_state])
+          end
         end
       {:error, message} ->
         # Decode error

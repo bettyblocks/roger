@@ -1,20 +1,10 @@
 defmodule Roger.Worker.CallbacksTest do
   use ExUnit.Case
+  use Roger.AppCase
+
   #doctest Roger.Worker
 
   alias Roger.{Application, Queue, Application.WorkerSupervisor}
-
-  setup do
-    Process.register(self(), :testcase)
-
-    on_exit fn ->
-      Elixir.Application.put_env(:roger, :callbacks, [])
-    end
-
-    app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
-    {:ok, _} = Application.start(app)
-    {:ok, %{app: app}}
-  end
 
 
   defmodule TestJob do

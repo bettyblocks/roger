@@ -11,7 +11,8 @@
 - [x] Multi-tentant architecture
 - [x] based on Rabbitmq
 - [x] per-queue concurrency control
-- [ ] jobs cancellation
+- [x] jobs cancellation (both in the queue and while running)
+- [ ] all operations are cluster-aware
 - [ ] enforce job uniqueness during execution
 - [ ] enforce job uniqueness per queue
 - [ ] pausing / unpausing work queues

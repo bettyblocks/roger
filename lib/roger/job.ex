@@ -2,8 +2,8 @@ defmodule Roger.Job do
 
   @type t :: %__MODULE__{}
 
-  @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key cancel_key)a}
-  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, cancel_key: nil
+  @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key)a}
+  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil
 
   alias Roger.{Application,Queue}
 
@@ -35,10 +35,9 @@ defmodule Roger.Job do
 
       def queue_key(_args), do: nil
       def execution_key(_args), do: nil
-      def cancel_key(_args), do: nil
       def queue_type(_args), do: :default
 
-      defoverridable queue_key: 1, execution_key: 1, cancel_key: 1, queue_type: 1
+      defoverridable queue_key: 1, execution_key: 1, queue_type: 1
 
       def perform(_args) do
         raise RuntimeError, "FIXME: implement #{unquote(__CALLER__.module)}.perform/1"
@@ -50,7 +49,7 @@ defmodule Roger.Job do
 
   def create(module, args \\ [], id \\ nil) when is_atom(module) and is_list(args) do
     keys =
-      ~w(queue_key execution_key cancel_key)a
+      ~w(queue_key execution_key)a
       |> Enum.map(fn(prop) -> {prop, Kernel.apply(module, prop, [args])} end)
       |> Enum.into(%{})
 

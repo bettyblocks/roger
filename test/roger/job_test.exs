@@ -54,7 +54,6 @@ defmodule Roger.JobTest do
     assert SquareJob == job.module
     assert [2] == job.args
     assert "asdf" == job.id
-    assert nil == job.cancel_key
     assert nil == job.queue_key
     assert nil == job.execution_key
   end

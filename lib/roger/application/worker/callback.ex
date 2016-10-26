@@ -8,8 +8,9 @@ defmodule Roger.Application.Worker.Callback do
       def after_run(_application, _job, _result, _before_run_state), do: nil
 
       def on_error(_application, _job, _error, _before_run_state), do: nil
+      def on_cancel(_application, _job), do: nil
 
-      defoverridable before_run: 2, after_run: 4, on_error: 4
+      defoverridable before_run: 2, after_run: 4, on_error: 4, on_cancel: 2
 
     end
   end
@@ -17,5 +18,6 @@ defmodule Roger.Application.Worker.Callback do
   @callback before_run(Roger.Application.t, Roger.Job.t) :: any
   @callback after_run(Roger.Application.t, Roger.Job.t, any, any) :: any
   @callback on_error(Roger.Application.t, Roger.Job.t, any, any) :: any
+  @callback on_cancel(Roger.Application.t, Roger.Job.t) :: any
 
 end

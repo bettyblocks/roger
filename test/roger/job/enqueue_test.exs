@@ -1,5 +1,6 @@
 defmodule Roger.Job.EnqueueTest do
   use ExUnit.Case
+  use Roger.AppCase
 
   alias Roger.Job
 
@@ -15,16 +16,6 @@ defmodule Roger.Job.EnqueueTest do
 
   end
 
-  setup do
-    Process.register(self(), :testcase)
-
-    app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
-    {:ok, _pid} = Application.start(app)
-
-    {:ok, %{app: app}}
-  end
-
-
   test "job enqueue", %{app: app} do
     {:ok, job} = Job.create(MyCalculation, [2])
     :ok = Job.enqueue(job, app)
@@ -32,6 +23,7 @@ defmodule Roger.Job.EnqueueTest do
     receive do
       4 ->
         :ok
+
     after 1000 ->
         flunk("Job not executed")
     end
