@@ -78,7 +78,13 @@ defmodule Roger.Application.Worker do
   defp callback(callback, args) do
     mod = Application.get_env(:roger, :callbacks)[:worker]
     if mod != nil do
-      Kernel.apply(mod, callback, args)
+      try do
+        # We never want the callback to crash the worker process.
+        Kernel.apply(mod, callback, args)
+      catch
+        t, e ->
+          Logger.error "Worker error in callback function #{mod}.#{callback}: #{t}:#{e}"
+      end
     end
   end
 

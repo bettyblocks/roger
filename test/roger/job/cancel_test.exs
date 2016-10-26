@@ -62,14 +62,19 @@ defmodule Roger.Job.CancelTest do
   end
 
   test "it can cancel a job that's running", %{app: app} do
+
+    # Create and enqueue a job
     {:ok, job} = Job.create(MyCancellableJob, [2])
     :ok = Job.enqueue(job, app)
+    # Wait until it says it's running
     receive do
       :job_running -> :ok
     end
 
+    # Now cancel it
     assert :ok = StateManager.cancel_job(app, job.id)
 
+    # Wait until the on_cancel callback fires
     receive do
       {:cancel, id} ->
         assert id == job.id

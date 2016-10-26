@@ -42,6 +42,7 @@ defmodule Roger.Application.StateManager do
   def handle_call({:cancel, job_id}, _from, state) do
     KeySet.add(state.cancel_set, job_id)
 
+    # Cancel any running jobs
     pid = GProc.whereis(Worker.name(job_id))
     if is_pid(pid) and Process.alive?(pid) do
       Process.exit(pid, :exit)
