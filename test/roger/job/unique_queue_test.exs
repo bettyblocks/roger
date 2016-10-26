@@ -10,6 +10,7 @@ defmodule Roger.Job.UniqueQueueTest do
     end
 
     def perform([msg]) do
+      :timer.sleep(10)
       send(:testcase, msg)
     end
   end
