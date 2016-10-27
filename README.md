@@ -12,7 +12,7 @@
 - [x] per-queue concurrency control
 - [x] jobs cancellation (both in the queue and while running)
 - [x] option to enforce per-application job uniqueness
-- [ ] option to enforce job uniqueness during execution
+- [x] option to enforce job uniqueness during execution
 - [ ] all operations are cluster-aware
 - [ ] pausing / unpausing work queues
 - [ ] retry w/ exponential backoff

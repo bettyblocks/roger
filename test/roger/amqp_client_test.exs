@@ -18,7 +18,7 @@ defmodule Roger.AMQPClientTest do
   end
 
   test "publish" do
-    :ok = Roger.AMQPClient.publish("", "test-queue", "test-payload", [])
+    :ok = Roger.AMQPClient.publish("", "test-queue", "test-payload")
   end
 
 end

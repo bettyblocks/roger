@@ -26,7 +26,7 @@ defmodule Roger.WorkerTest do
   @payload ~s({"id": "123", "module": "Elixir.Roger.WorkerTest.TestJob", "args": []})
 
   test "start worker in application worker supervisor", %{app: app} do
-    {:ok, _pid} = WorkerSupervisor.start_child(app, @payload, nil)
+    {:ok, _pid} = WorkerSupervisor.start_child(app, :channel, @payload, nil)
     receive do
       :job_ok -> :ok
     after 1000 ->

@@ -24,8 +24,8 @@ defmodule Roger.Application.WorkerSupervisor do
     supervise(children, strategy: :simple_one_for_one)
   end
 
-  def start_child(application, payload, meta) do
-    Supervisor.start_child(GProc.via(name(application)), [application, payload, meta])
+  def start_child(application, channel, payload, meta) do
+    Supervisor.start_child(GProc.via(name(application)), [application, channel, payload, meta])
   end
 
 end

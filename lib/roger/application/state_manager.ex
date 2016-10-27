@@ -28,6 +28,14 @@ defmodule Roger.Application.StateManager do
     GenServer.call(global_name(application), {:remove_queued, queue_key})
   end
 
+  def executing?(application, execution_key, add \\ nil) do
+    GenServer.call(global_name(application), {:is_executing, execution_key, add})
+  end
+
+  def remove_executed(application, execution_key) do
+    GenServer.call(global_name(application), {:remove_executed, execution_key})
+  end
+
   defp global_name(%Application{id: id}) do
     {:global, {:app_state_manager, id}}
   end
@@ -36,15 +44,17 @@ defmodule Roger.Application.StateManager do
   ## Server side
 
   defmodule State do
-    defstruct application: nil, cancel_set: nil, queue_set: nil
+    defstruct application: nil, cancel_set: nil, queue_set: nil, execute_set: nil
   end
 
   def init([application]) do
     {:ok, cancel_set} = KeySet.start_link
     {:ok, queue_set} = KeySet.start_link
+    {:ok, execute_set} = KeySet.start_link
     state = %State{
       application: application,
       cancel_set: cancel_set,
+      execute_set: execute_set,
       queue_set: queue_set}
     {:ok, state}
   end
@@ -78,6 +88,19 @@ defmodule Roger.Application.StateManager do
 
   def handle_call({:remove_queued, queue_key}, _from, state) do
     reply = KeySet.remove(state.queue_set, queue_key)
+    {:reply, reply, state}
+  end
+
+  def handle_call({:is_executing, execute_key, add}, _from, state) do
+    reply = KeySet.contains?(state.execute_set, execute_key)
+    if !reply and add == :add do
+      KeySet.add(state.execute_set, execute_key)
+    end
+    {:reply, reply, state}
+  end
+
+  def handle_call({:remove_executed, execute_key}, _from, state) do
+    reply = KeySet.remove(state.execute_set, execute_key)
     {:reply, reply, state}
   end
 

@@ -21,8 +21,8 @@ defmodule Roger.Job do
   @doc """
   Enqueues a job in the given application.
   """
-  def enqueue(%__MODULE__{} = job, %Application{} = application) do
-    queue = Queue.make_name(application, queue_type(job))
+  def enqueue(%__MODULE__{} = job, %Application{} = application, override_queue \\ nil) do
+    queue = Queue.make_name(application, override_queue || queue_type(job))
 
     # Check the queue key; when there is a queue key and it is not
     # queued, immediately add it to the queue key set to prevent
@@ -61,7 +61,7 @@ defmodule Roger.Job do
 
   end
 
-  def create(module, args \\ [], id \\ nil) when is_atom(module) and is_list(args) do
+  def create(module, args \\ [], id \\ nil) when is_atom(module) do
     keys =
       ~w(queue_key execution_key)a
       |> Enum.map(fn(prop) -> {prop, Kernel.apply(module, prop, [args])} end)

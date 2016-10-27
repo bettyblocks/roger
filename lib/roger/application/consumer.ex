@@ -13,14 +13,6 @@ defmodule Roger.Application.Consumer do
     GenServer.start_link(__MODULE__, [application], name: GProc.via(name(application)))
   end
 
-  def ack(application, consumer_tag, delivery_tag) do
-    GenServer.call(GProc.via(name(application)), {:ack_nack, :ack, consumer_tag, delivery_tag})
-  end
-
-  def nack(application, consumer_tag, delivery_tag) do
-    GenServer.call(GProc.via(name(application)), {:ack_nack, :nack, consumer_tag, delivery_tag})
-  end
-
   def is_alive?(application) do
     GProc.is_alive(name(application))
   end
@@ -47,15 +39,6 @@ defmodule Roger.Application.Consumer do
   def init([application]) do
     context = nil # FIXME application consumer callback?
     {:ok, %State{application: application, context: context}, 0}
-  end
-
-  def handle_call({:ack_nack, ack_or_nack, consumer_tag, delivery_tag}, _from, state) do
-    reply = case find_queue_by_tag(consumer_tag, state) do
-              nil -> {:error, :channel_not_found}
-              q ->
-                Kernel.apply(AMQP.Basic, ack_or_nack, [q.channel, delivery_tag])
-            end
-    {:reply, reply, state}
   end
 
   def handle_call(:get_queues, _from, state) do
@@ -88,7 +71,8 @@ defmodule Roger.Application.Consumer do
   end
 
   def handle_info({:basic_deliver, payload, meta}, state) do
-    {:ok, _pid} = WorkerSupervisor.start_child(state.application, payload, meta)
+    channel = find_queue_by_tag(meta.consumer_tag, state).channel
+    {:ok, _pid} = WorkerSupervisor.start_child(state.application, channel, payload, meta)
     {:noreply, state}
   end
 

@@ -20,7 +20,7 @@ defmodule Roger.AMQPClient do
   ## Server interface
 
   defmodule State do
-    defstruct config: nil, connection: nil, send_channel: nil
+    defstruct config: nil, connection: nil, client_channel: nil
   end
 
   def init([config]) do
@@ -28,7 +28,7 @@ defmodule Roger.AMQPClient do
   end
 
   def handle_call({:publish, exchange, routing_key, payload, opts}, _from, state) do
-    reply = Basic.publish(state.send_channel, exchange, routing_key, payload, opts)
+    reply = Basic.publish(state.client_channel, exchange, routing_key, payload, opts)
     {:reply, reply, state}
   end
 
@@ -52,8 +52,8 @@ defmodule Roger.AMQPClient do
   defp reconnect(state) do
     case Connection.open(state.config) do
       {:ok, connection} ->
-        {:ok, send_channel} = Channel.open(connection)
-        %State{state | connection: connection, send_channel: send_channel}
+        {:ok, client_channel} = Channel.open(connection)
+        %State{state | connection: connection, client_channel: client_channel}
       {:error, _} = e ->
         Logger.warn "AMQP error: #{inspect e}"
         Process.send_after(self(), :timeout, 5000) # reconnect
