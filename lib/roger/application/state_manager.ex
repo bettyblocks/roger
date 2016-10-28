@@ -6,7 +6,7 @@ defmodule Roger.Application.StateManager do
   use GenServer
 
   require Logger
-  alias Roger.{GProc, Application, KeySet, Application.Worker}
+  alias Roger.{Application, KeySet, System}
 
   def start_link(application) do
     GenServer.start_link(__MODULE__, [application], name: global_name(application))
@@ -61,12 +61,7 @@ defmodule Roger.Application.StateManager do
 
   def handle_call({:cancel, job_id}, _from, state) do
     KeySet.add(state.cancel_set, job_id)
-
-    # Cancel any running jobs
-    for {pid, _value} <- GProc.find_properties(Worker.name(job_id)) do
-      Process.exit(pid, :exit)
-    end
-
+    System.cast(:cancel, job_id: job_id)
     {:reply, :ok, state}
   end
 

@@ -1,8 +1,6 @@
 defmodule Roger.AppCase do
   use ExUnit.CaseTemplate
 
-  alias Betty.App.RunEnv
-
   using(opts) do
     quote do
 

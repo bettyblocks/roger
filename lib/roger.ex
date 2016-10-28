@@ -11,6 +11,7 @@ defmodule Roger do
 
     children = [
       worker(Roger.AMQPClient, [amqp_config]),
+      worker(Roger.System, []),
       supervisor(Roger.ApplicationSupervisor, []),
     ]
 
