@@ -8,14 +8,14 @@
 ## Feature checklist
 
 - [x] Multi-tentant architecture
-- [x] based on Rabbitmq
-- [x] per-queue concurrency control
-- [x] jobs cancellation (both in the queue and while running)
-- [x] option to enforce per-application job uniqueness
-- [x] option to enforce job uniqueness during execution
-- [ ] all operations are cluster-aware
-- [ ] pausing / unpausing work queues
-- [ ] retry w/ exponential backoff
+- [x] Based on Rabbitmq
+- [x] Per-queue concurrency control
+- [x] Jobs cancellation (both in the queue and while running)
+- [x] Option to enforce per-application job uniqueness
+- [x] Option to enforce job uniqueness during execution
+- [ ] All operations are cluster-aware
+- [ ] Pausing / unpausing work queues
+- [ ] Retry w/ exponential backoff
 - [ ] Management API (phoenix mountable); return info from each node (rabbitmq pubsub?)
 - [ ] Documentation
 
