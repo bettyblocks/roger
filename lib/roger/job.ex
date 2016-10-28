@@ -5,6 +5,26 @@ defmodule Roger.Job do
   To start, `use Roger.Job` in your module. The only required callback
   to implement is the `perform/1` function.
 
+  Other functions that can be implemented in a job module are the
+  following:
+
+  `queue_key/1` - Enforces job uniqueness. When returning a string
+  from this function, Roger enforces that only one job per queue key
+  can be put in the queue at the same time. Only when the job has left
+  the queue (after it has been executed), it will be possible to
+  enqueue a job with the same queue key again.
+
+  `execution_key/1` - Enforces job execution serialization. When
+  returning a string from this function, Roger enforces that not more
+  than one job with the same job is executed concurrently. However, it
+  is still possible to have multiple jobs with the same execution key
+  enqueued, but jobs that have the same execution key will be put in a
+  waiting queue and processed serially.
+
+  `queue_type/1` - Specifies which application queue the job will run
+  on. By default, this function returns `:default`, the default queue
+  type.
+
   """
 
   @type t :: %__MODULE__{}
@@ -46,6 +66,7 @@ defmodule Roger.Job do
   defmacro __using__(_) do
 
     quote do
+      @after_compile __MODULE__
 
       def queue_key(_args), do: nil
       def execution_key(_args), do: nil
@@ -53,14 +74,29 @@ defmodule Roger.Job do
 
       defoverridable queue_key: 1, execution_key: 1, queue_type: 1
 
-      def perform(_args) do
-        raise RuntimeError, "FIXME: implement #{unquote(__CALLER__.module)}.perform/1"
+      def __after_compile__(env, _) do
+        if !Module.defines?(__MODULE__, {:perform, 1}) do
+          raise ArgumentError, "#{__MODULE__} must implement the perform/1 function"
+        end
       end
-      defoverridable perform: 1
-    end
 
+    end
   end
 
+  @callback queue_key(any) :: String.t
+  @callback execution_key(any) :: String.t
+  @callback queue_type(any) :: atom
+  @callback perform(any) :: any
+
+  @doc """
+  Creates a new job based on a job module.
+
+  The given `module` must exist as an Elixir module and must be
+  implementing the Job behaviour (`use Roger.Job`).
+
+  The function returns the Job struct, which can be sent off to the
+  queues using `Job.enqueue/2`.
+  """
   def create(module, args \\ [], id \\ nil) when is_atom(module) do
     keys =
       ~w(queue_key execution_key)a
@@ -76,11 +112,20 @@ defmodule Roger.Job do
     :crypto.rand_bytes(20) |> Base.hex_encode32(case: :lower)
   end
 
+  @doc """
+  Executes the given job.
 
+  This function is called from within a `Job.Worker` process, there's
+  no need to call it yourself.
+  """
   def execute(%__MODULE__{} = job) do
     Kernel.apply(job.module, :perform, [job.args])
   end
 
+  @doc """
+  Decode a binary payload into a Job struct, and validates it.
+  """
+  @spec decode(String.t) :: Roger.Job.t
   def decode(payload) do
     Poison.decode(payload, as: %__MODULE__{})
     |> validate

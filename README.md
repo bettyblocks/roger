@@ -13,8 +13,8 @@
 - [x] Jobs cancellation (both in the queue and while running)
 - [x] Option to enforce per-application job uniqueness
 - [x] Option to enforce job uniqueness during execution
-- [ ] All operations are cluster-aware
 - [ ] Pausing / unpausing work queues
+- [ ] All operations are cluster-aware
 - [ ] Retry w/ exponential backoff
 - [ ] Management API (phoenix mountable); return info from each node (rabbitmq pubsub?)
 - [ ] Documentation

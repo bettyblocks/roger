@@ -4,6 +4,7 @@ defmodule Roger.AppCase do
   using(opts) do
     quote do
 
+      require Logger
       alias Roger.{Application, Queue, Job}
 
       setup do
