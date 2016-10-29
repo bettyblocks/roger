@@ -125,8 +125,7 @@ defmodule Roger.Application.Worker do
         # ack it to have it removed from waiting queue
         :ok = AMQP.Basic.ack(state.channel, meta.delivery_tag)
       {:empty, _} ->
-        # delete waiting queue when empty
-        # {:ok, _} = AMQP.Queue.delete(state.channel, name, nowait: true)
+        # FIXME delete waiting queue when empty - this can error
         :ok
     end
   end

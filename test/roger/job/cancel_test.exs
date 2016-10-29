@@ -17,6 +17,7 @@ defmodule Roger.Job.CancelTest do
 
   defmodule MyJob do
     use Roger.Job
+    def perform(_), do: nil
   end
 
 

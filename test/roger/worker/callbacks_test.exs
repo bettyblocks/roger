@@ -91,6 +91,7 @@ defmodule Roger.Worker.CallbacksTest do
 
   defmodule ErrorJob do
     use Roger.Job
+    def perform(_), do: raise RuntimeError, "foo"
   end
 
   defmodule OnErrorWorkerCallback do
