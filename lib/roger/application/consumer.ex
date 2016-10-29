@@ -51,9 +51,6 @@ defmodule Roger.Application.Consumer do
 
   def init([application]) do
     paused = StateManager.queue_get_paused(application)
-    IO.puts("init")
-    IO.puts "paused: #{inspect paused}"
-
     {:ok, %State{application: application, paused: paused}, 0}
   end
 
@@ -104,8 +101,6 @@ defmodule Roger.Application.Consumer do
     queue = find_queue_by_tag(meta.consumer_tag, state)
     if queue != nil do
       if !MapSet.member?(state.paused, queue.type) do
-        IO.puts ":no: #{inspect queue.type}"
-
         {:ok, _pid} = WorkerSupervisor.start_child(state.application, queue.channel, payload, meta)
         {:noreply, state}
       else

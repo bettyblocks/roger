@@ -109,14 +109,14 @@ defmodule Roger.Application.ConsumerTest do
      {:ok, job} = Job.create(TestJob, :job_4)
     Job.enqueue(job, app)
 
-    pid = Roger.GProc.whereis({:app_job_consumer, "test"})
-    Process.exit(pid, :kill)
+    # pid = Roger.GProc.whereis({:app_job_consumer, "test"})
+    # Process.exit(pid, :kill)
 
     refute_receive {:done, "job_4"}
 
     :ok = StateManager.queue_resume(app, :default)
 
-    assert_receive {:done, "job_4"}, 200
+    assert_receive {:done, "job_4"}
 
   end
 

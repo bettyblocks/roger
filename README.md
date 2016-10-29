@@ -18,7 +18,7 @@
 - [ ] Retry w/ exponential backoff
 - [ ] Management API (phoenix mountable); return info from each node (rabbitmq pubsub?)
 - [ ] Documentation
-- [ ] Resilient against AMQP network conditions (reconnects, etc)
+- [ ] Resilient against AMQP network conditions (reconnects, process crashes, etc)
 
 
 ## Configuration
