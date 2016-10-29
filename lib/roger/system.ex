@@ -97,7 +97,12 @@ defmodule Roger.System do
 
   def handle_info({:basic_deliver, payload, meta = %{content_type: @command_content_type}}, state) do
     command = Command.decode(payload)
-    reply = dispatch_command(command)
+    reply = try do
+              dispatch_command(command)
+            catch
+              e ->
+                Logger.warn "#{inspect e}"
+            end
     payload = :erlang.term_to_binary({node(), reply})
     if meta.correlation_id != :undefined do
       opts = [content_type: @reply_content_type, correlation_id: meta.correlation_id]
@@ -137,8 +142,15 @@ defmodule Roger.System do
     for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
       Process.exit(pid, :exit)
     end
-
     :ok
+  end
+
+  defp dispatch_command({:queue_pause, [queue: queue, app_id: app_id]}) do
+    Roger.Application.Consumer.pause(app_id, queue)
+  end
+
+  defp dispatch_command({:queue_resume, [queue: queue, app_id: app_id]}) do
+    Roger.Application.Consumer.resume(app_id, queue)
   end
 
   defp dispatch_command({command, args}) do

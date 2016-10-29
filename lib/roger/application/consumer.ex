@@ -5,7 +5,9 @@ defmodule Roger.Application.Consumer do
   """
 
   require Logger
-  alias Roger.{Queue, GProc, Application, Application.WorkerSupervisor}
+  alias Roger.{Queue, GProc, Application,
+               Application.WorkerSupervisor,
+               Application.StateManager}
 
   use GenServer
 
@@ -34,6 +36,9 @@ defmodule Roger.Application.Consumer do
   end
 
   defp name(%Application{id: id}) do
+    name(id)
+  end
+  defp name(id) when is_binary(id) do
     {:app_job_consumer, id}
   end
 
@@ -41,12 +46,15 @@ defmodule Roger.Application.Consumer do
   ## Server interface
 
   defmodule State do
-    defstruct application: nil, channel: nil, context: nil, queues: [], paused: MapSet.new, closing: %{}
+    defstruct application: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}
   end
 
   def init([application]) do
-    context = nil # FIXME application consumer callback?
-    {:ok, %State{application: application, context: context}, 0}
+    paused = StateManager.queue_get_paused(application)
+    IO.puts("init")
+    IO.puts "paused: #{inspect paused}"
+
+    {:ok, %State{application: application, paused: paused}, 0}
   end
 
   def handle_call(:get_queues, _from, state) do
@@ -96,6 +104,8 @@ defmodule Roger.Application.Consumer do
     queue = find_queue_by_tag(meta.consumer_tag, state)
     if queue != nil do
       if !MapSet.member?(state.paused, queue.type) do
+        IO.puts ":no: #{inspect queue.type}"
+
         {:ok, _pid} = WorkerSupervisor.start_child(state.application, queue.channel, payload, meta)
         {:noreply, state}
       else

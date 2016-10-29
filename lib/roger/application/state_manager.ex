@@ -36,6 +36,24 @@ defmodule Roger.Application.StateManager do
     GenServer.call(global_name(application), {:remove_executed, execution_key})
   end
 
+  @doc """
+  Cluster-wide pausing of the given queue in the given application.
+  """
+  def queue_pause(application, queue) do
+    GenServer.call(global_name(application), {:queue_pause, queue})
+  end
+
+  @doc """
+  Cluster-wide pausing of the given queue in the given application.
+  """
+  def queue_resume(application, queue) do
+    GenServer.call(global_name(application), {:queue_resume, queue})
+  end
+
+  def queue_get_paused(application) do
+    GenServer.call(global_name(application), :queue_get_paused)
+  end
+
   defp global_name(%Application{id: id}) do
     {:global, {:app_state_manager, id}}
   end
@@ -44,7 +62,7 @@ defmodule Roger.Application.StateManager do
   ## Server side
 
   defmodule State do
-    defstruct application: nil, cancel_set: nil, queue_set: nil, execute_set: nil
+    defstruct application: nil, cancel_set: nil, queue_set: nil, execute_set: nil, paused: MapSet.new
   end
 
   def init([application]) do
@@ -99,4 +117,17 @@ defmodule Roger.Application.StateManager do
     {:reply, reply, state}
   end
 
+  def handle_call({:queue_pause, queue}, _from, state) do
+    System.cast(:queue_pause, queue: queue, app_id: state.application.id)
+    {:reply, :ok, %{state | paused: MapSet.put(state.paused, queue)}}
+  end
+
+  def handle_call({:queue_resume, queue}, _from, state) do
+    System.cast(:queue_resume, queue: queue, app_id: state.application.id)
+    {:reply, :ok, %{state | paused: MapSet.delete(state.paused, queue)}}
+  end
+
+  def handle_call(:queue_get_paused, _from, state) do
+    {:reply, state.paused, state}
+  end
 end
