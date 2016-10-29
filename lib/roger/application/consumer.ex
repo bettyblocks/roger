@@ -25,6 +25,14 @@ defmodule Roger.Application.Consumer do
     GenServer.call(GProc.via(name(application)), {:reconfigure, application})
   end
 
+  def pause(application, queue) do
+    GenServer.call(GProc.via(name(application)), {:pause, queue})
+  end
+
+  def resume(application, queue) do
+    GenServer.call(GProc.via(name(application)), {:resume, queue})
+  end
+
   defp name(%Application{id: id}) do
     {:app_job_consumer, id}
   end
@@ -33,7 +41,7 @@ defmodule Roger.Application.Consumer do
   ## Server interface
 
   defmodule State do
-    defstruct application: nil, channel: nil, context: nil, queues: []
+    defstruct application: nil, channel: nil, context: nil, queues: [], paused: MapSet.new, closing: %{}
   end
 
   def init([application]) do
@@ -56,6 +64,16 @@ defmodule Roger.Application.Consumer do
     {:reply, reply, state}
   end
 
+  def handle_call({:pause, queue}, _from, state) do
+    state = %{state | paused: MapSet.put(state.paused, queue)}
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:resume, queue}, _from, state) do
+    state = resume_queue(queue, state)
+    {:reply, :ok, state}
+  end
+
   def handle_info({:basic_consume_ok, %{consumer_tag: consumer_tag}}, state) do
     # Confirmation sent by the broker after registering this process as a consumer
     queues = List.foldr(state.queues, [], fn(q, acc) ->
@@ -65,15 +83,32 @@ defmodule Roger.Application.Consumer do
     {:noreply, Map.put(state, :queues, queues)}
   end
 
-  def handle_info({:basic_cancel_ok, _}, state) do
-    # FIXME do something here?
-    {:noreply, state}
+  def handle_info({:basic_cancel_ok, %{consumer_tag: consumer_tag}}, state) do
+    if Map.has_key?(state.closing, consumer_tag) do
+      :ok = AMQP.Channel.close(state.closing[consumer_tag])
+      {:noreply, %{state | closing: Map.delete(state.closing, consumer_tag)}}
+    else
+      {:noreply, state}
+    end
   end
 
   def handle_info({:basic_deliver, payload, meta}, state) do
-    channel = find_queue_by_tag(meta.consumer_tag, state).channel
-    {:ok, _pid} = WorkerSupervisor.start_child(state.application, channel, payload, meta)
-    {:noreply, state}
+    queue = find_queue_by_tag(meta.consumer_tag, state)
+    if queue != nil do
+      if !MapSet.member?(state.paused, queue.type) do
+        {:ok, _pid} = WorkerSupervisor.start_child(state.application, queue.channel, payload, meta)
+        {:noreply, state}
+      else
+        state = pause_queue(queue, state)
+        AMQP.Basic.nack(queue.channel, meta.delivery_tag)
+        {:noreply, state}
+      end
+    else
+      if Map.has_key?(state.closing, meta.consumer_tag) do
+        AMQP.Basic.nack(state.closing[meta.consumer_tag], meta.delivery_tag)
+      end
+      {:noreply, state}
+    end
   end
 
   def handle_info(:timeout, state) do
@@ -101,12 +136,15 @@ defmodule Roger.Application.Consumer do
     end
 
     # close channels of queues that are not in application.queues
-    MapSet.difference(existing_queue_types, new_queue_types)
+    closing = MapSet.difference(existing_queue_types, new_queue_types)
     |> pick.(state.queues)
-    |> Enum.each(fn(q) ->
-      {:ok, _} = AMQP.Basic.cancel(q.channel, q.consumer_tag)
-      :ok = AMQP.Channel.close(q.channel)
+    |> Enum.map(fn(q) ->
+      if q.consumer_tag != nil do
+        {:ok, _} = AMQP.Basic.cancel(q.channel, q.consumer_tag)
+      end
+      {q.consumer_tag, q.channel}
     end)
+    |> Enum.into(%{})
 
     # reconfigure channels that have changed
     existing_queues = MapSet.intersection(new_queue_types, existing_queue_types)
@@ -122,27 +160,71 @@ defmodule Roger.Application.Consumer do
     new_queues = MapSet.difference(new_queue_types, existing_queue_types)
     |> pick.(application.queues)
     |> Enum.map(fn(q) ->
-      queue_name = Queue.make_name(state.application, q.type)
       {:ok, channel} = Roger.AMQPClient.open_channel()
       :ok = AMQP.Basic.qos(channel, prefetch_count: q.max_workers)
-      # FIXME: do something with stats?
-      {:ok, _stats} = AMQP.Queue.declare(channel, queue_name)
-      {:ok, consumer_tag} = AMQP.Basic.consume(channel, queue_name)
-      %Queue{
-        q |
-        queue: queue_name,
-        channel: channel,
-        consumer_tag: consumer_tag,
-        confirmed: false}
+      #      if !MapSet.member?(state.paused, q.type) do
+      consume(%Queue{q | channel: channel}, state)
+      #      else
+      #        %Queue{q | channel: channel}
+      #      end
     end)
 
     queues = (existing_queues ++ new_queues) |> Enum.sort(&(&1.type < &2.type))
 
-    %State{state | application: application, queues: queues}
+    %State{state | application: application, queues: queues, closing: closing}
   end
 
   defp find_queue_by_tag(consumer_tag, state) do
     state.queues |> Enum.find(&(&1.consumer_tag == consumer_tag))
   end
 
+  defp find_queue_by_type(type, state) do
+    state.queues |> Enum.find(&(&1.type == type))
+  end
+
+  defp pause_queue(queue, state) do
+    # We got a message for a paused queue. nack the message and stop consuming the queue.
+    if queue.consumer_tag != nil do
+      {:ok, _} = AMQP.Basic.cancel(queue.channel, queue.consumer_tag)
+      queues = Enum.map(state.queues, fn(q) ->
+        if q.consumer_tag == queue.consumer_tag do
+          %{q | consumer_tag: nil}
+        else
+          q
+        end
+      end)
+      %{state | queues: queues}
+    else
+      state
+    end
+  end
+
+  defp resume_queue(type, state) do
+    if MapSet.member?(state.paused, type) do
+      queue = find_queue_by_type(type, state)
+      queues = Enum.map(state.queues, fn(q) ->
+        if q.type == queue.type do
+          consume(q, state)
+        else
+          q
+        end
+      end)
+      %{state |
+        paused: MapSet.delete(state.paused, type),
+        queues: queues}
+    else
+      state
+    end
+  end
+
+  defp consume(queue, state) do
+    queue_name = Queue.make_name(state.application, queue.type)
+    # FIXME: do something with stats?
+    {:ok, _stats} = AMQP.Queue.declare(queue.channel, queue_name)
+    {:ok, consumer_tag} = AMQP.Basic.consume(queue.channel, queue_name)
+    %Queue{
+      queue |
+      consumer_tag: consumer_tag,
+      confirmed: false}
+  end
 end

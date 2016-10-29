@@ -8,6 +8,11 @@ defmodule Roger.AppCase do
       alias Roger.{Application, Queue, Job}
 
       setup do
+        # empty the default queue first
+        {:ok, channel} = Roger.AMQPClient.open_channel
+        AMQP.Queue.declare(channel, "test-default")
+        AMQP.Queue.purge(channel, "test-default")
+
         Process.register(self(), :testcase)
         app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
         {:ok, _pid} = Application.start(app)
