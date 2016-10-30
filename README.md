@@ -15,8 +15,9 @@
 - [x] Option to enforce job uniqueness during execution
 - [x] Pausing / unpausing work queues
 - [x] All operations are cluster-aware
-- [ ] Retry w/ exponential backoff
-- [ ] Management API (phoenix mountable); return info from each node (rabbitmq pubsub?)
+- [x] Retry w/ exponential backoff
+- [ ] Application state persistence between restarts (callback based? mnesia?)
+- [ ] Management API (phoenix mountable); return info from each node
 - [ ] Documentation
 - [ ] Resilient against AMQP network conditions (reconnects, process crashes, etc)
 
