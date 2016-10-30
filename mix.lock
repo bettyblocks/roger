@@ -2,4 +2,5 @@
   "amqp_client": {:git, "https://github.com/jbrisbin/amqp_client.git", "d50aec00b94f0766a048b4eceaf25ddfdeeb1d86", [tag: "rabbitmq-3.6.2"]},
   "gproc": {:hex, :gproc, "0.6.1", "4579663e5677970758a05d8f65d13c3e9814ec707ad51d8dcef7294eda1a730c", [:rebar3], []},
   "poison": {:hex, :poison, "2.2.0", "4763b69a8a77bd77d26f477d196428b741261a761257ff1cf92753a0d4d24a63", [:mix], []},
-  "rabbit_common": {:git, "https://github.com/jbrisbin/rabbit_common.git", "80814606ae23cc820c74e443383e192cd69ec030", [ref: ""]}}
+  "rabbit_common": {:git, "https://github.com/jbrisbin/rabbit_common.git", "80814606ae23cc820c74e443383e192cd69ec030", [ref: ""]},
+  "singleton": {:hex, :singleton, "1.1.1", "afeffb623b50297d5b4c03b989fcae61b4cad6feaf81ca957881849a8de47eb4", [:mix], []}}

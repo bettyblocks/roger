@@ -53,13 +53,18 @@ defmodule Roger.System do
     end
 
     def check_node_reply(state, id, node, reply) do
-      reply = Reply.add_reply(state.replies[id], node, reply)
-      if Reply.done?(reply) do
-        GenServer.reply(reply.from, {:ok, reply.replies})
-        %{state | replies: Map.delete(state.replies, id)}
+      if state.replies[id] != nil do
+        reply = Reply.add_reply(state.replies[id], node, reply)
+        if Reply.done?(reply) do
+          GenServer.reply(reply.from, {:ok, reply.replies})
+          %{state | replies: Map.delete(state.replies, id)}
+        else
+          # not done yet
+          %{state | replies: Map.put(state.replies, id, reply)}
+        end
       else
-        # not done yet
-        %{state | replies: Map.put(state.replies, id, reply)}
+        Logger.error "#{node} Unknown reply to #{id}"
+        state
       end
     end
   end

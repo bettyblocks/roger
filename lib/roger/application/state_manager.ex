@@ -8,10 +8,6 @@ defmodule Roger.Application.StateManager do
   require Logger
   alias Roger.{Application, KeySet, System}
 
-  def start_link(application) do
-    GenServer.start_link(__MODULE__, [application], name: global_name(application))
-  end
-
   def cancel_job(application, job_id) do
     GenServer.call(global_name(application), {:cancel, job_id})
   end
@@ -54,7 +50,10 @@ defmodule Roger.Application.StateManager do
     GenServer.call(global_name(application), :queue_get_paused)
   end
 
-  defp global_name(%Application{id: id}) do
+  def global_name(%Application{id: id}) do
+    global_name(id)
+  end
+  def global_name(id) when is_binary(id) do
     {:global, {:app_state_manager, id}}
   end
 

@@ -19,7 +19,6 @@ defmodule Roger.Application.ContainingSupervisor do
 
     children = [
       supervisor(Roger.Application.WorkerSupervisor, [application], restart: :permanent),
-      worker(Roger.Application.StateManager, [application], restart: :permanent),
       worker(Roger.Application.Consumer, [application], restart: :permanent),
     ]
 

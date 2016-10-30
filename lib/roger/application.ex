@@ -16,13 +16,17 @@ defmodule Roger.Application do
 
   defstruct id: nil, name: nil, queues: []
 
+  alias Roger.Application.{StateManager, Consumer}
 
   def start(%__MODULE__{} = application) do
+    # make sure a statemanager instance is running
+    Singleton.start_child(StateManager, [application], {:app_state_manager, application.id})
     # start application supervision tree
     case Roger.ApplicationSupervisor.start_child(application) do
-      {:ok, pid} -> {:ok, pid}
+      {:ok, pid} ->
+        {:ok, pid}
       {:error, {:already_started, pid}} ->
-        :ok = Roger.Application.Consumer.reconfigure(application)
+        :ok = Consumer.reconfigure(application)
         {:ok, pid}
     end
   end
@@ -36,7 +40,7 @@ defmodule Roger.Application do
   end
 
   def callback_module do
-    Application.get_env(:roger, :callbacks)[:application]
+    Application.get_env(:roger, :callbacks, [])[:application]
   end
 
 end
