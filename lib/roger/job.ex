@@ -61,8 +61,7 @@ defmodule Roger.Job do
         app_id: application.id
       ]
 
-      payload = Poison.encode!(job)
-      Roger.AMQPClient.publish("", queue, payload, opts)
+      Roger.AMQPClient.publish("", queue, encode(job), opts)
     end
   end
 
@@ -132,8 +131,17 @@ defmodule Roger.Job do
   """
   @spec decode(String.t) :: Roger.Job.t
   def decode(payload) do
-    Poison.decode(payload, as: %__MODULE__{})
+    (try do
+       {:ok, :erlang.binary_to_term(payload)}
+     rescue
+       ArgumentError ->
+         {:error, "Job decoding error"}
+     end)
     |> validate
+  end
+
+  def encode(job) do
+    job |> :erlang.term_to_binary
   end
 
   defp validate({:ok, job}), do: validate(job)
@@ -143,13 +151,8 @@ defmodule Roger.Job do
     {:error, "Job id must be set"}
   end
 
-  defp validate(%__MODULE__{module: module} = job) when is_binary(module) do
-    # convert to atom
-    try do
-      validate(%{job | module: String.to_existing_atom(module)})
-    rescue
-      ArgumentError -> {:error, "Unknown job module: " <> module}
-    end
+  defp validate(%__MODULE__{module: module}) when not(is_atom(module)) do
+    {:error, "Job module must be an atom"}
   end
 
   defp validate(%__MODULE__{} = job) do

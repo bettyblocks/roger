@@ -28,7 +28,7 @@ defmodule Roger.Application.Retry do
       app_id: application.id,
     ]
 
-    payload = Poison.encode!(job)
+    payload = Job.encode(job)
     case prio > 0 do
       true ->
         queue = Queue.make_name(application, queue_type, ".retry")

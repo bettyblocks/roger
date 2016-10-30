@@ -48,7 +48,8 @@ defmodule Roger.JobTest do
 
 
   test "job from JSON" do
-    payload = ~s({"id": "asdf", "module": "Elixir.Roger.JobTest.SquareJob", "args": [2]})
+    payload = :erlang.term_to_binary(%Job{id: "asdf", module: SquareJob, args: [2]})
+    # payload = ~s({"id": "asdf", "module": "Elixir.Roger.JobTest.SquareJob", "args": [2]})
     {:ok, job} = Job.decode(payload)
 
     assert SquareJob == job.module
@@ -64,15 +65,15 @@ defmodule Roger.JobTest do
   end
 
   test "invalid job from JSON, no id" do
-    payload = ~s({})
+    payload = :erlang.term_to_binary(%Job{})
     {:error, msg} = Job.decode(payload)
     assert Regex.match? ~r/Job id must be set/, msg
   end
 
   test "invalid job from JSON, unknown module" do
-    payload = ~s({"id": "asdf", "module": "Elixir.NoExisting", "args": [2]})
+    payload = :erlang.term_to_binary(%Job{id: "asdf", module: "NoExisting"})
     {:error, msg} = Job.decode(payload)
-    assert Regex.match? ~r/Unknown job module/, msg
+    assert Regex.match? ~r/Job module must be an atom/, msg
   end
 
 end
