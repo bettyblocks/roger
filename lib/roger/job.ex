@@ -25,12 +25,16 @@ defmodule Roger.Job do
   on. By default, this function returns `:default`, the default queue
   type.
 
+  `retryable?/0` - Specifies whether the job should be retried using
+  an exponential backoff scheme. The default implementation returns
+  false, meaning that jobs will not be retried.
+
   """
 
   @type t :: %__MODULE__{}
 
-  @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key)a}
-  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil
+  @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count)a}
+  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0
 
   alias Roger.{Application, Queue, Application.StateManager}
 
@@ -71,8 +75,9 @@ defmodule Roger.Job do
       def queue_key(_args), do: nil
       def execution_key(_args), do: nil
       def queue_type(_args), do: :default
+      def retryable?(), do: false
 
-      defoverridable queue_key: 1, execution_key: 1, queue_type: 1
+      defoverridable queue_key: 1, execution_key: 1, queue_type: 1, retryable?: 0
 
       def __after_compile__(env, _) do
         if !Module.defines?(__MODULE__, {:perform, 1}) do
@@ -153,6 +158,10 @@ defmodule Roger.Job do
 
   def queue_type(%__MODULE__{} = job) do
     job.module.queue_type(job.args)
+  end
+
+  def retryable?(%__MODULE__{} = job) do
+    job.module.retryable?()
   end
 
 end

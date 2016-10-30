@@ -1,7 +1,12 @@
 defmodule Roger.Application.Consumer do
   @moduledoc """
 
-  Processes incoming jobs for an application and spawns off the worker process.
+  Job consumer process.
+
+  This process is responsible for maintaining subscriptions to the
+  application's channels and receives jobs. For each job, it spawns
+  off a worker process.
+
   """
 
   require Logger

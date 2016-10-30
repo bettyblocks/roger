@@ -14,13 +14,13 @@ defmodule Roger.Application.Worker do
     currently running one finishes
 
   - On job failure, the job needs to be queued in the retry queue, if
-    the job is marked retryable.
+    the job is marked retryable. By default, jobs are *not* retried.
 
   """
 
   require Logger
 
-  alias Roger.{Job, GProc, Queue}
+  alias Roger.{Job, GProc, Queue, Application.Retry}
   alias Roger.Application.StateManager
 
   use GenServer
@@ -71,11 +71,18 @@ defmodule Roger.Application.Worker do
               callback(:after_run, [state.application, job, result, before_run_state])
             catch
               t, e ->
-                # Logger.error "Execution error: #{t}:#{inspect e}"
-                # FIXME: retry?
-                job_done(job, :nack, state)
+                #Logger.error "Execution error: #{t}:#{inspect e}"
+              cb = if Job.retryable?(job) do
+                case Retry.retry(state.channel, state.application, job) do
+                  {:ok, :queued} -> :on_error
+                  {:ok, :buried} -> :on_buried
+                end
+              else
+                :on_error
+              end
 
-              callback(:on_error, [state.application, job, {t, e}, before_run_state])
+              job_done(job, :ack, state)
+              callback(cb, [state.application, job, {t, e}, before_run_state])
             end
           end
         end
@@ -117,7 +124,7 @@ defmodule Roger.Application.Worker do
         # We never want the callback to crash the worker process.
         Kernel.apply(mod, callback, args)
       catch
-        t, e ->
+        :exit=t, e ->
           Logger.error "Worker error in callback function #{mod}.#{callback}: #{t}:#{e}"
       end
     end
@@ -151,7 +158,7 @@ defmodule Roger.Application.Worker do
   defp execution_waiting_queue(job, state, return \\ :prefixed) do
     bare_name = "execution-waiting-#{job.execution_key}"
     name = Queue.make_name(state.application, bare_name)
-    {:ok, _} = AMQP.Queue.declare(state.channel, name)
+    {:ok, _} = AMQP.Queue.declare(state.channel, name, arguments: [{"x-expires", 1800}])
     case return do
       :prefixed -> name
       :unprefixed -> bare_name

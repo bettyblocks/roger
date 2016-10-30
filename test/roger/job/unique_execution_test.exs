@@ -30,11 +30,7 @@ defmodule Roger.Job.UniqueExecutionTest do
 
     {:ok, channel} = Roger.AMQPClient.open_channel
     use AMQP
-    Queue.declare(channel, "test-execution-waiting-a")
-    Queue.purge(channel, "test-execution-waiting-a")
     on_exit fn -> Queue.purge(channel, "test-execution-waiting-a") end
-    on_exit fn -> Queue.purge(channel, "test-default") end
-
 
     Process.register(self(), :testcase)
     app = %Roger.Application{id: "test", queues: [Roger.Queue.define(:default, 10)]}

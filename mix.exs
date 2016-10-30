@@ -27,7 +27,9 @@ defmodule Roger.Mixfile do
       {:amqp_client, github: "jbrisbin/amqp_client", tag: "rabbitmq-3.6.2", override: true},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6.1"},
-      {:poison, "~> 2.1"}
+      {:poison, "~> 2.1"},
+
+      {:ex_doc, "~> 0.12", only: :dev}
     ]
   end
 end

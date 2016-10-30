@@ -5,8 +5,6 @@ defmodule Roger.ApplicationSupervisor do
 
   use Supervisor
 
-  alias Roger.GProc
-
   def start_link() do
     Supervisor.start_link(__MODULE__, [], name: __MODULE__)
   end

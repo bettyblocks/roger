@@ -1,4 +1,9 @@
 defmodule Roger.Queue do
+  @moduledoc """
+  Struct which holds information about a single queue.
+  """
+
+  @type t :: %__MODULE__{}
 
   defstruct type: nil, max_workers: nil, consumer_tag: nil, channel: nil, confirmed: false
 
@@ -6,8 +11,8 @@ defmodule Roger.Queue do
     %__MODULE__{type: type, max_workers: max_workers}
   end
 
-  def make_name(%Roger.Application{} = application, type) do
-    "#{application.id}-#{type}"
+  def make_name(%Roger.Application{} = application, type, postfix \\ "") do
+    "#{application.id}-#{type}#{postfix}"
   end
 
 end
