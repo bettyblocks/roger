@@ -7,7 +7,7 @@ defmodule Roger.Application.Retry do
   alias Roger.{Queue, Job}
 
   @levels [1, 3, 5, 10, 20, 35, 60, 100, 200, 400, 1000, 1800]
-  @levels_by_prio Enum.zip(Enum.count(@levels)..1, @levels) |> Enum.into(%{})
+
   if Mix.env == :test do
     @one_second 1
   else
@@ -15,11 +15,8 @@ defmodule Roger.Application.Retry do
   end
 
   def retry(channel, application, job) do
-    queue_type = Job.queue_type(job)
-    declare_retry_queue(channel, application, queue_type)
 
-    prio = Enum.count(@levels) - job.retry_count
-    job = %{job | retry_count: job.retry_count + 1}
+    {queue, expiration} = setup_retry_queue(channel, application, job)
 
     opts = [
       content_type: "application/json",
@@ -28,31 +25,35 @@ defmodule Roger.Application.Retry do
       app_id: application.id,
     ]
 
-    payload = Job.encode(job)
-    case prio > 0 do
-      true ->
-        queue = Queue.make_name(application, queue_type, ".retry")
-        opts = [priority: prio, expiration: Integer.to_string(@levels_by_prio[prio] * @one_second)] ++ opts
-        AMQP.Basic.publish(channel, "", queue, payload, opts)
-        {:ok, :queued}
-      false ->
-        queue = Queue.make_name(application, queue_type, ".buried")
-        AMQP.Basic.publish(channel, "", queue, payload, opts)
-        {:ok, :buried}
+    payload = Job.encode(%Job{job | retry_count: job.retry_count + 1})
+    opts_extra = case expiration do
+                   :buried -> []
+                   _ -> [expiration: Integer.to_string(expiration)]
+                 end
+    AMQP.Basic.publish(channel, "", queue, payload, opts ++ opts_extra)
+    {:ok, expiration}
+  end
+
+  defp setup_retry_queue(channel, application, job) do
+    queue_type = Job.queue_type(job)
+    expiration = if job.retry_count <= Enum.count(@levels) do
+      :lists.nth(job.retry_count + 1, @levels)
+    else
+      :buried
     end
-  end
 
-  defp declare_retry_queue(channel, application, type) do
     arguments = [
-      {"x-expires", Enum.max(@levels) * 1000},
-      {"x-max-priority", Enum.count(@levels)},
       {"x-dead-letter-exchange", ""},
-      {"x-dead-letter-routing-key", Queue.make_name(application, type)}
+      {"x-dead-letter-routing-key", Queue.make_name(application, queue_type)}
     ]
-    queue_name = Queue.make_name(application, type, ".retry")
-    {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, arguments: arguments)
-    queue_name = Queue.make_name(application, type, ".buried")
-    {:ok, _stats} = AMQP.Queue.declare(channel, queue_name)
+    {queue_name, arguments} = if expiration == :buried do
+      {Queue.make_name(application, queue_type, ".buried"), arguments}
+    else
+      {Queue.make_name(application, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration * 2}]}
+    end
 
+    {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, arguments: arguments)
+    {queue_name, expiration}
   end
+
 end

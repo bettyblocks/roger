@@ -74,8 +74,8 @@ defmodule Roger.Application.Worker do
                 #Logger.error "Execution error: #{t}:#{inspect e}"
               cb = if Job.retryable?(job) do
                 case Retry.retry(state.channel, state.application, job) do
-                  {:ok, :queued} -> :on_error
                   {:ok, :buried} -> :on_buried
+                  {:ok, _expiration} -> :on_error
                 end
               else
                 :on_error
