@@ -17,7 +17,7 @@ defmodule Roger.Integration do
     Logger.info "Nodes running: #{inspect Node.list}"
 
     {:ok, _} = Application.ensure_all_started(:roger)
-    :timer.sleep 500
+    wait_ready(@slave_nodes)
 
     for _ <- 1..@job_count do
       enqueue
@@ -26,7 +26,6 @@ defmodule Roger.Integration do
     :timer.sleep 1000
     :rpc.abcast(@slave_nodes, Roger.Integration.Slave, :done)
     result = receive_all(@slave_nodes, %{})
-    IO.puts "result: #{inspect result}"
 
     # assert that all nodes have executed some jobs
     executed = result
@@ -37,6 +36,18 @@ defmodule Roger.Integration do
 
     # Assert that all jobs have executed
     @job_count = result |> Map.values |> Enum.sum
+
+    Logger.info "Job execution result: #{inspect result}"
+    Logger.info "Test OK."
+
+  end
+
+  defp wait_ready([]), do: :ok
+  defp wait_ready(nodes) do
+    receive do
+      {:ready, node} ->
+        wait_ready(nodes -- [node])
+    end
   end
 
   defp receive_all([], result) do

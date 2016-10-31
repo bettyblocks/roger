@@ -42,6 +42,12 @@ defmodule Roger.Integration.Slave do
 
     Elixir.Application.put_env(:roger, :callbacks, worker: WorkerCallback)
 
+    spawn(fn ->
+      :timer.sleep 1000
+      log(state.master, "ready")
+      send(state.master, {:ready, node()})
+    end)
+
     {:noreply, state}
   end
 
