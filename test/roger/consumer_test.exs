@@ -51,11 +51,11 @@ defmodule Roger.Application.ConsumerTest do
     Job.enqueue(job, app)
     :timer.sleep 10
 
-    refute_receive {:done, "job_1"}
+    refute_receive {:done, :job_1}
 
     :ok = Consumer.resume(app, :default)
 
-    assert_receive {:done, "job_1"}
+    assert_receive {:done, :job_1}
 
   end
 
@@ -74,11 +74,11 @@ defmodule Roger.Application.ConsumerTest do
     :ok = Consumer.reconfigure(Map.put(app, :queues, [Queue.define(:default, 10)]))
     :timer.sleep 10
 
-    refute_receive {:done, "job_2"}
+    refute_receive {:done, :job_2}
 
     :ok = Consumer.resume(app, :default)
 
-    assert_receive {:done, "job_2"}
+    assert_receive {:done, :job_2}
 
   end
 
@@ -92,11 +92,11 @@ defmodule Roger.Application.ConsumerTest do
     Job.enqueue(job, app)
 
 
-    refute_receive {:done, "job_3"}
+    refute_receive {:done, :job_3}
 
     :ok = StateManager.queue_resume(app, :default)
 
-    assert_receive {:done, "job_3"}
+    assert_receive {:done, :job_3}
 
   end
 
@@ -112,11 +112,11 @@ defmodule Roger.Application.ConsumerTest do
     # pid = Roger.GProc.whereis({:app_job_consumer, "test"})
     # Process.exit(pid, :kill)
 
-    refute_receive {:done, "job_4"}
+    refute_receive {:done, :job_4}
 
     :ok = StateManager.queue_resume(app, :default)
 
-    assert_receive {:done, "job_4"}
+    assert_receive {:done, :job_4}
 
   end
 

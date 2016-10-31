@@ -1,0 +1,5 @@
+#!/bin/bash
+export MIX_ENV=test
+
+mix compile
+exec iex --sname $1@x1 -pa '_build/test/lib/*/ebin' -e Roger.Integration.start_single

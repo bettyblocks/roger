@@ -1,3 +1,4 @@
+sudo: false
 language: elixir
 services:
   - rabbitmq
@@ -6,4 +7,4 @@ elixir:
 otp_release:
   - 19.0
   - 18.3
-script: MIX_ENV=test mix compile && MIX_ENV=test mix test
+script: MIX_ENV=test mix compile && MIX_ENV=test mix test && integration_test/run

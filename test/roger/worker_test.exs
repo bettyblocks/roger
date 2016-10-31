@@ -2,7 +2,7 @@ defmodule Roger.WorkerTest do
   use ExUnit.Case
   #doctest Roger.Worker
 
-  alias Roger.{Application, Queue, Application.WorkerSupervisor}
+  alias Roger.{Application, Queue, Application.WorkerSupervisor, Job}
 
   setup do
     Process.register(self(), :testcase)
@@ -23,7 +23,8 @@ defmodule Roger.WorkerTest do
 
   end
 
-  @payload ~s({"id": "123", "module": "Elixir.Roger.WorkerTest.TestJob", "args": []})
+  @payload :erlang.term_to_binary(%Job{id: "asdf", module: TestJob, args: []})
+  #@payload ~s({"id": "123", "module": "Elixir.Roger.WorkerTest.TestJob", "args": []})
 
   test "start worker in application worker supervisor", %{app: app} do
     {:ok, _pid} = WorkerSupervisor.start_child(app, :channel, @payload, nil)

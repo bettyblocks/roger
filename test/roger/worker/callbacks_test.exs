@@ -17,7 +17,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
 
-  @payload ~s({"id": "123", "module": "Elixir.Roger.Worker.CallbacksTest.TestJob", "args": []})
+  @payload :erlang.term_to_binary(%Job{id: "asdf", module: TestJob, args: []})
 
   defmodule BeforeRunWorkerCallback do
     use Roger.Application.Worker.Callback
@@ -103,7 +103,8 @@ defmodule Roger.Worker.CallbacksTest do
     end
   end
 
-  @payload ~s({"id": "123", "module": "Elixir.Roger.Worker.CallbacksTest.ErrorJob", "args": []})
+  @payload :erlang.term_to_binary(%Job{id: "asdf", module: ErrorJob, args: []})
+  # @payload ~s({"id": "123", "module": "Elixir.Roger.Worker.CallbacksTest.ErrorJob", "args": []})
 
   test "test on_error worker callback", %{app: app} do
     Elixir.Application.put_env(:roger, :callbacks, worker: OnErrorWorkerCallback)

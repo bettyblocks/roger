@@ -88,7 +88,7 @@ defmodule Roger.Application.Worker do
         end
       {:error, message} ->
         # Decode error
-        Logger.debug "JSON decoding error: #{inspect message}"
+        Logger.debug "Job decoding error: #{inspect message} #{inspect state.raw_payload}"
         job_done(nil, :ack, state)
     end
     {:stop, :normal, state}

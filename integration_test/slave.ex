@@ -1,0 +1,56 @@
+defmodule Roger.Integration.Slave do
+
+  defmodule WorkerCallback do
+    use Roger.Application.Worker.Callback
+
+    def after_run(_app, job, _, _) do
+      GenServer.cast(Roger.Integration.Slave, {:job_done, job.module})
+    end
+  end
+
+  use GenServer
+
+  defmodule State do
+    defstruct master: nil, done_count: 0
+  end
+
+  def start_link(master) do
+    GenServer.start_link(__MODULE__, [master], name: __MODULE__)
+  end
+
+  def init([master]) do
+    log(master, "Initializing")
+    {:ok, %State{master: master}, 0}
+  end
+
+  def handle_cast({:job_done, module}, state) do
+    #log(state.master, "Job done: #{module}")
+    state = %{state | done_count: state.done_count + 1}
+    {:noreply, state}
+  end
+
+  def handle_info(:done, state) do
+    done(state)
+    {:noreply, state}
+  end
+
+
+  def handle_info(:timeout, state) do
+    {:ok, _} = Application.ensure_all_started(:roger)
+    app = %Roger.Application{id: "test", queues: [Roger.Queue.define(:default, 10)]}
+    {:ok, _pid} = Roger.Application.start(app)
+
+    Elixir.Application.put_env(:roger, :callbacks, worker: WorkerCallback)
+
+    {:noreply, state}
+  end
+
+  defp log(master, msg) do
+    send(master, {:log, node(), msg})
+  end
+
+  defp done(state) do
+    send(state.master, {:done, node(), state.done_count})
+  end
+
+end
