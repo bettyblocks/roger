@@ -33,4 +33,11 @@ defmodule Roger.GProc do
   def find_properties(selector) do
     for [_, pid, value] <- :gproc.select([{{ {:p, @scope, selector}, :_, :_}, [], [:'$$']}]), do: {pid, value}
   end
+
+  @doc """
+  Return list of {pid, value} pairs for the given selector.
+  """
+  def find_names(selector) do
+    for [{:n, @scope, value}, _, _] <- :gproc.select([{{ {:n, @scope, selector}, :_, :_}, [], [:'$$']}]), do: value
+  end
 end

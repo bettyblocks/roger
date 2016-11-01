@@ -1,4 +1,26 @@
 defmodule Roger.Application.Worker.Callback do
+  @moduledoc """
+
+  Provides hooks into the job execution lifecycle.
+
+  Roger can be configured with callback modules for the job worker,
+  which invokes functions on various places in the job's life
+  cycle.
+
+      config :roger, :callbacks,
+        worker: MyWorkerModule
+
+  In this scenario, the mentioned `MyWorkerModule` needs to *use*
+  `Roger.Worker.Callback`:
+
+      defmodule MyWorkerModule do
+        use Roger.Worker.Callback
+      end
+
+  In this worker module, you can implement the functions `before_run/2`,
+  `after_run/2`, `on_error/4`, `on_cancel/2` and `on_buried/2` to
+  respond to job events.
+  """
 
   defmacro __using__(_) do
     quote do

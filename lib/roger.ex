@@ -13,11 +13,15 @@ defmodule Roger do
       worker(Roger.AMQPClient, [amqp_config]),
       worker(Roger.System, []),
       supervisor(Roger.ApplicationSupervisor, []),
+      worker(Roger.Startup, [], restart: :temporary),
     ]
 
     opts = [strategy: :one_for_one, name: Roger.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
+  def prep_stop(_) do
+    :ok = Roger.AMQPClient.close()
+  end
 
 end

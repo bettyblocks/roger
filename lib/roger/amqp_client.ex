@@ -34,6 +34,10 @@ defmodule Roger.AMQPClient do
     GenServer.call(__MODULE__, {:publish, exchange, routing_key, payload, opts})
   end
 
+  def close do
+    GenServer.call(__MODULE__, :close)
+  end
+
   ## Server interface
 
   defmodule State do
@@ -57,14 +61,13 @@ defmodule Roger.AMQPClient do
     {:reply, reply, state}
   end
 
-  def handle_info(:timeout, state) do
-    {:noreply, reconnect(state)}
+  def handle_call(:close, _from, state) do
+    reply = Connection.close(state.connection)
+    {:reply, reply, state}
   end
 
-  def handle_info(msg, state) do
-    IO.puts "msg: #{inspect msg}"
-
-    {:noreply, state}
+  def handle_info(:timeout, state) do
+    {:noreply, reconnect(state)}
   end
 
   defp reconnect(state) do

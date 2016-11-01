@@ -23,7 +23,7 @@ defmodule Roger.Integration.Slave do
     {:ok, %State{master: master}, 0}
   end
 
-  def handle_cast({:job_done, module}, state) do
+  def handle_cast({:job_done, _module}, state) do
     #log(state.master, "Job done: #{module}")
     state = %{state | done_count: state.done_count + 1}
     {:noreply, state}

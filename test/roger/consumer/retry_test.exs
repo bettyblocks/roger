@@ -29,7 +29,7 @@ defmodule Roger.Application.Consumer.RetryTest do
     Job.enqueue(job, app)
 
     for n <- 0..5 do
-      assert_receive {:retry, ^n}
+      assert_receive {:retry, ^n}, 200
     end
   end
 
