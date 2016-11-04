@@ -1,6 +1,6 @@
 # Roger: Multi-tenant job processor
 
-[![Build Status](https://travis-ci.org/arjan/decorator.png?branch=master)](https://travis-ci.org/bettyblocks/roger)
+[![Build Status](https://travis-ci.org/bettyblocks/roger.png?branch=master)](https://travis-ci.org/bettyblocks/roger)
 
 
 **TODO: Add description**
@@ -16,10 +16,10 @@
 - [x] Pausing / unpausing work queues
 - [x] All operations are cluster-aware
 - [x] Retry w/ exponential backoff
+- [ ] Resilient against AMQP network conditions (reconnects, process crashes, etc)
 - [ ] Application state persistence between restarts (callback based? mnesia?)
 - [ ] Management API (phoenix mountable); return info from each node
 - [ ] Documentation
-- [ ] Resilient against AMQP network conditions (reconnects, process crashes, etc)
 
 
 ## Configuration
