@@ -33,6 +33,7 @@ defmodule Roger.System do
   ###
 
   defmodule Reply do
+    @moduledoc false
     defstruct from: nil, replies: [], waiting: nil
     def new(from, nodes) do
       %__MODULE__{from: from, waiting: nodes}
@@ -47,6 +48,7 @@ defmodule Roger.System do
   end
 
   defmodule State do
+    @moduledoc false
     defstruct channel: nil, reply_queue: nil, replies: %{}
     def add_waiting_reply(state, id, from, nodes) do
       %{state | replies: Map.put(state.replies, id, Reply.new(from, nodes))}

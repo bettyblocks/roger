@@ -4,22 +4,9 @@ defmodule Roger.ApplicationTest do
 
   alias Roger.{Application, Queue}
 
-  defmodule TestApplications do
-    use Roger.Application.Callback
-
-    def defined_applications do
-      [%Application{id: :test}]
-    end
-  end
-
   setup do
     Elixir.Application.put_env(:roger, :callbacks, application: TestApplications)
     :ok
-  end
-
-  test "list applications" do
-    assert [app] = Application.defined_applications
-    assert :test == app.id
   end
 
   test "start application" do

@@ -1,4 +1,5 @@
 defmodule Roger.GProc do
+  @moduledoc false
 
   @scope :l
 

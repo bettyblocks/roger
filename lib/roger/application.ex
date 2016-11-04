@@ -31,18 +31,6 @@ defmodule Roger.Application do
     end
   end
 
-  def defined_applications() do
-    callback_module.defined_applications()
-  end
-
-  def start_all() do
-    defined_applications() |> Enum.each(&start/1)
-  end
-
-  def callback_module do
-    Application.get_env(:roger, :callbacks, [])[:application]
-  end
-
   def running_applications do
     for {:app_supervisor, id} <- Roger.GProc.find_names({:app_supervisor, :_}) do
       %__MODULE__{id: id, queues: Roger.Application.Consumer.get_queues(id)}

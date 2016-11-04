@@ -1,5 +1,4 @@
 defmodule Roger.Application.Worker do
-
   @moduledoc """
 
   Handles the decoding and execution of a single job.
@@ -36,6 +35,7 @@ defmodule Roger.Application.Worker do
   ## Server interface
 
   defmodule State do
+    @moduledoc false
     defstruct application: nil, meta: nil, raw_payload: nil, channel: nil
   end
 

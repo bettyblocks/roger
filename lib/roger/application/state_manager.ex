@@ -61,6 +61,7 @@ defmodule Roger.Application.StateManager do
   ## Server side
 
   defmodule State do
+    @moduledoc false
     defstruct application: nil, cancel_set: nil, queue_set: nil, execute_set: nil, paused: MapSet.new
   end
 

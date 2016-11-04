@@ -1,4 +1,7 @@
 defmodule Roger do
+  @moduledoc """
+  The OTP application's entrypoint and top-level supervisor
+  """
 
   use Application
 
@@ -20,6 +23,7 @@ defmodule Roger do
     Supervisor.start_link(children, opts)
   end
 
+  @doc false
   def prep_stop(_) do
     :ok = Roger.AMQPClient.close()
   end

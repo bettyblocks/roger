@@ -51,6 +51,7 @@ defmodule Roger.Application.Consumer do
   ## Server interface
 
   defmodule State do
+    @moduledoc false
     defstruct application: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}
   end
 
