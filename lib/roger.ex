@@ -25,7 +25,7 @@ defmodule Roger do
 
   @doc false
   def prep_stop(_) do
-    :ok = Roger.AMQPClient.close()
+    Roger.AMQPClient.close()
   end
 
 end

@@ -76,6 +76,10 @@ defmodule Roger.System do
     {:ok, %State{}, 0}
   end
 
+  def handle_call(_, _, %State{channel: nil} = state) do
+    {:reply, {:error, :disconnected}, state}
+  end
+
   # Send the command to all nodes; don't wait for response
   def handle_call({:cast, command}, _from, state) do
     payload = Command.encode(command)
@@ -113,7 +117,7 @@ defmodule Roger.System do
     payload = :erlang.term_to_binary({node(), reply})
     if meta.correlation_id != :undefined do
       opts = [content_type: @reply_content_type, correlation_id: meta.correlation_id]
-      :ok = Basic.publish(state.channel, "", state.reply_queue, payload, opts)
+      :ok = Basic.publish(state.channel, "", meta.reply_to, payload, opts)
     end
     {:noreply, state}
   end
@@ -124,19 +128,25 @@ defmodule Roger.System do
   end
 
   def handle_info(:timeout, state) do
-    {:ok, channel} = Roger.AMQPClient.open_channel
+    case Roger.AMQPClient.open_channel do
+      {:ok, channel} ->
 
-    # Fanout / pubsub setup
-    :ok = Exchange.declare(channel, @system_exchange, :fanout)
-    {:ok, info} = Queue.declare(channel, "", exclusive: true)
-    Queue.bind(channel, info.queue, @system_exchange)
-    {:ok, _} = AMQP.Basic.consume(channel, info.queue)
+        # Fanout / pubsub setup
+        :ok = Exchange.declare(channel, @system_exchange, :fanout)
+        {:ok, info} = Queue.declare(channel, "", exclusive: true)
+        Queue.bind(channel, info.queue, @system_exchange)
+        {:ok, _} = AMQP.Basic.consume(channel, info.queue)
 
-    # reply queue
-    {:ok, info} = Queue.declare(channel, "", exclusive: true)
-    {:ok, _} = AMQP.Basic.consume(channel, info.queue)
+        # reply queue
+        {:ok, info} = Queue.declare(channel, "", exclusive: true)
+        {:ok, _} = AMQP.Basic.consume(channel, info.queue)
 
-    {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
+        {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
+
+      {:error, :disconnected} ->
+        Process.send_after(self(), :timeout, 1000) # try again if the AMQP client is back up
+        {:noreply, %State{state | channel: nil, reply_queue: nil}}
+    end
   end
 
   defp dispatch_command({:ping, _args}) do
