@@ -1,5 +1,12 @@
 #!/bin/bash
 export MIX_ENV=test
+HOST=roger
+if [ "$1" != "" ]; then
+    HOST=$1
+fi
+if [ "$IP" == "" ]; then
+    IP=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
+fi
 
 mix compile
-exec iex --sname $1@x1 -pa '_build/test/lib/*/ebin' -e Roger.Integration.start_single
+exec iex --name $HOST@$IP -pa '_build/test/lib/*/ebin' -e Roger.Integration.start_single

@@ -1,6 +1,6 @@
 defmodule Roger.Application.ConsumerTest do
   use ExUnit.Case
-  use Roger.AppCase, async: false
+  use Roger.AppCase
 
   doctest Roger.Application.Consumer
 

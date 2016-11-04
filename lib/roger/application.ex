@@ -16,34 +16,6 @@ defmodule Roger.Application do
 
   defstruct id: nil, queues: []
 
-  alias Roger.Application.{StateManager, Consumer}
-
-  def start(%__MODULE__{} = application) do
-    # make sure a statemanager instance is running
-    Singleton.start_child(StateManager, [application], {:app_state_manager, application.id})
-    # start application supervision tree
-    case Roger.ApplicationSupervisor.start_child(application) do
-      {:ok, pid} ->
-        {:ok, pid}
-      {:error, {:already_started, pid}} ->
-        :ok = Consumer.reconfigure(application)
-        {:ok, pid}
-    end
-  end
-
-  def running_applications do
-    for {:app_supervisor, id} <- Roger.GProc.find_names({:app_supervisor, :_}) do
-      %__MODULE__{id: id, queues: Roger.Application.Consumer.get_queues(id)}
-    end
-  end
-
-  def start_all(apps) do
-    apps
-    |> Enum.map(fn({id, queues}) ->
-      queues = (for q <- queues, do: Roger.Queue.define(q))
-      app = %__MODULE__{id: "#{id}", queues: queues}
-      {:ok, _} = start(app)
-    end)
-  end
+  defdelegate start(app), to: Roger.ApplicationRegistry
 
 end

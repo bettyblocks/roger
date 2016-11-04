@@ -100,8 +100,9 @@ defmodule Roger.Integration do
     else
       %Roger.Application{id: "integration", queues: [Roger.Queue.define(:default, 100)]}
     end
-    {:ok, _pid} = Roger.Application.start(app)
-    :pong = Node.ping(@master)
+    Roger.Application.start(app)
+
+    # :pong = Node.ping(@master)
     IO.puts "Node.list: #{inspect Node.list}"
   end
 

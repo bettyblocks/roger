@@ -16,7 +16,7 @@ defmodule Roger do
       worker(Roger.AMQPClient, [amqp_config]),
       worker(Roger.System, []),
       supervisor(Roger.ApplicationSupervisor, []),
-      worker(Roger.Startup, [], restart: :temporary),
+      worker(Roger.ApplicationRegistry, []),
     ]
 
     opts = [strategy: :one_for_one, name: Roger.Supervisor]

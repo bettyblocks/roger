@@ -21,14 +21,17 @@ defmodule Roger.AMQPClient do
   Open a channel to RabbitMQ and return it. This also links the calling process to the connection.
   """
   def open_channel() do
-    case GenServer.call(__MODULE__, {:open_channel, self()}) do
+    case GenServer.call(__MODULE__, :open_channel) do
       {:ok, channel} ->
-        Process.link(channel.pid)
+        if !test?, do: Process.link(channel.pid)
         {:ok, channel}
       {:error, _} = e ->
         e
     end
   end
+
+  @env Mix.env
+  defp test?, do: @env == :test
 
   @doc """
   Publishes a message to RabbitMQ.
@@ -64,7 +67,7 @@ defmodule Roger.AMQPClient do
     {:reply, reply, state}
   end
 
-  def handle_call({:open_channel, sender}, _from, state) do
+  def handle_call(:open_channel, _from, state) do
     reply = amqp_response(Channel.open(state.connection))
     {:reply, reply, state}
   end
@@ -80,7 +83,7 @@ defmodule Roger.AMQPClient do
 
   # Handles when the AMQP connection goes down
   def handle_info({:DOWN, _, :process, pid, _}, %{connection: %{pid: pid}} = state) do
-    Logger.warn "AMQP connection lost"
+    Logger.debug "AMQP connection lost"
     Process.send_after(self(), :timeout, 1000) # reconnect
     {:noreply, %{state | connection: nil, client_channel: nil}}
   end
@@ -93,13 +96,13 @@ defmodule Roger.AMQPClient do
     case Connection.open(state.config) do
       {:ok, connection} ->
         {:ok, client_channel} = Channel.open(connection)
-        Logger.warn "AMQP client connected."
+        Logger.debug "AMQP client connected."
 
         state=%State{state | connection: connection, client_channel: client_channel}
         Process.monitor(connection.pid)
         state
       {:error, _} = e ->
-        Logger.warn "AMQP error: #{inspect e}"
+        Logger.debug "AMQP error: #{inspect e}"
         Process.send_after(self(), :timeout, 5000) # reconnect
         %State{state | connection: nil, client_channel: nil}
     end

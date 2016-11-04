@@ -32,7 +32,8 @@ defmodule Roger.Application.Retry do
 
   defp setup_retry_queue(channel, application, job) do
     queue_type = Job.queue_type(job)
-    expiration = if job.retry_count <= Enum.count(@levels) do
+
+    expiration = if job.retry_count < Enum.count(@levels) do
       :lists.nth(job.retry_count + 1, @levels)
     else
       :buried

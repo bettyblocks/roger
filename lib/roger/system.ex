@@ -26,6 +26,10 @@ defmodule Roger.System do
     GenServer.call(__MODULE__, {:call, Command.new(command, args)})
   end
 
+  def connected? do
+    GenServer.call(__MODULE__, :is_connected)
+  end
+
   def cast(command, args \\ nil) when is_atom(command) do
     GenServer.call(__MODULE__, {:cast, Command.new(command, args)})
   end
@@ -74,6 +78,10 @@ defmodule Roger.System do
 
   def init([]) do
     {:ok, %State{}, 0}
+  end
+
+  def handle_call(:is_connected, _from, state) do
+    {:reply, state.channel != nil, state}
   end
 
   def handle_call(_, _, %State{channel: nil} = state) do

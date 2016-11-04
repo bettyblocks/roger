@@ -2,10 +2,7 @@ defmodule Roger.Worker.CallbacksTest do
   use ExUnit.Case
   use Roger.AppCase
 
-  #doctest Roger.Worker
-
   alias Roger.{Application, Queue, Application.WorkerSupervisor}
-
 
   defmodule TestJob do
     use Roger.Job
@@ -15,7 +12,6 @@ defmodule Roger.Worker.CallbacksTest do
     end
 
   end
-
 
   @payload :erlang.term_to_binary(%Job{id: "asdf", module: TestJob, args: []})
 
@@ -30,6 +26,7 @@ defmodule Roger.Worker.CallbacksTest do
   test "test before-run worker callback", %{app: app} do
     Elixir.Application.put_env(:roger, :callbacks, worker: BeforeRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(app, :channel, @payload, nil)
+
     receive do
       :before_run_ok -> :ok
     after 1000 ->
@@ -50,6 +47,7 @@ defmodule Roger.Worker.CallbacksTest do
   test "test after-run worker callback", %{app: app} do
     Elixir.Application.put_env(:roger, :callbacks, worker: AfterRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(app, :channel, @payload, nil)
+
     receive do
       :after_run_ok -> :ok
     after 1000 ->
