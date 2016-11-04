@@ -14,7 +14,7 @@ defmodule Roger.Application do
 
   @type t :: %__MODULE__{}
 
-  defstruct id: nil, name: nil, queues: []
+  defstruct id: nil, queues: []
 
   alias Roger.Application.{StateManager, Consumer}
 
