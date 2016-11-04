@@ -96,9 +96,9 @@ defmodule Roger.Integration do
 
     {:ok, _} = Application.ensure_all_started(:roger)
     app = if node() == @master do
-      %Roger.Application{id: "test"}
+      %Roger.Application{id: "integration"}
     else
-      %Roger.Application{id: "test", queues: [Roger.Queue.define(:default, 100)]}
+      %Roger.Application{id: "integration", queues: [Roger.Queue.define(:default, 100)]}
     end
     {:ok, _pid} = Roger.Application.start(app)
     :pong = Node.ping(@master)
@@ -112,7 +112,7 @@ defmodule Roger.Integration do
 
   def enqueue do
     {:ok, job} = Roger.Job.create(Roger.Integration.Jobs.TestJob)
-    Roger.Job.enqueue(job, %Roger.Application{id: "test"})
+    Roger.Job.enqueue(job, %Roger.Application{id: "integration"})
     job
   end
 

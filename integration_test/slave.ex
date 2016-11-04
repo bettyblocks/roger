@@ -37,7 +37,7 @@ defmodule Roger.Integration.Slave do
 
   def handle_info(:timeout, state) do
     {:ok, _} = Application.ensure_all_started(:roger)
-    app = %Roger.Application{id: "test", queues: [Roger.Queue.define(:default, 10)]}
+    app = %Roger.Application{id: "integration", queues: [Roger.Queue.define(:default, 10)]}
     {:ok, _pid} = Roger.Application.start(app)
 
     Elixir.Application.put_env(:roger, :callbacks, worker: WorkerCallback)
