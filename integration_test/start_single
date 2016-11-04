@@ -9,4 +9,4 @@ if [ "$IP" == "" ]; then
 fi
 
 mix compile
-exec iex --name $HOST@$IP -pa '_build/test/lib/*/ebin' -e Roger.Integration.start_single
+exec iex --sname $HOST -pa '_build/test/lib/*/ebin' -e Roger.Integration.start_single

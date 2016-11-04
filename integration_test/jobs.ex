@@ -5,10 +5,8 @@ defmodule Roger.Integration.Jobs do
     require Logger
 
     def perform(_) do
-      :timer.sleep 10
-      #Logger.warn "Executing!"
-      #File.write!("/tmp/job.txt", "#{DateTime.utc_now} - Executed on: #{node}\n", [:append])
-      :nop
+      #:timer.sleep 10
+      :ok
     end
   end
 

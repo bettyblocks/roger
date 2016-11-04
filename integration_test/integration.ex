@@ -102,7 +102,7 @@ defmodule Roger.Integration do
     end
     Roger.Application.start(app)
 
-    # :pong = Node.ping(@master)
+    :pong = Node.ping(@master)
     IO.puts "Node.list: #{inspect Node.list}"
   end
 
@@ -112,7 +112,7 @@ defmodule Roger.Integration do
   end
 
   def enqueue do
-    {:ok, job} = Roger.Job.create(Roger.Integration.Jobs.TestJob)
+    {:ok, job} = Roger.Job.create(Roger.Integration.Jobs.TestJob, %{foo: "bar"})
     Roger.Job.enqueue(job, %Roger.Application{id: "integration"})
     job
   end
