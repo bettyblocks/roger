@@ -36,11 +36,11 @@ defmodule Roger.Job do
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count)a}
   defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0
 
-  alias Roger.{Application, Queue, Application.StateManager}
+  alias Roger.{Application, Queue, Application.StateManager, Job}
 
   require Logger
 
-  @queue_types ~w(default dependent expression)a
+  @content_type "application/x-erlang-binary"
 
   @doc """
   Enqueues a job in the given application.
@@ -54,15 +54,18 @@ defmodule Roger.Job do
     if job.queue_key != nil and StateManager.queued?(application, job.queue_key, :add) do
       {:error, :duplicate}
     else
-      opts = [
-        content_type: "application/json",
-        persistent: true,
-        message_id: job.id,
-        app_id: application.id
-      ]
-
-      Roger.AMQPClient.publish("", queue, encode(job), opts)
+      Roger.AMQPClient.publish("", queue, encode(job), Job.publish_opts(job, application))
     end
+  end
+
+  @doc """
+  Constructs the AMQP options for publishing the job
+  """
+  def publish_opts(%__MODULE__{} = job, %Application{} = application) do
+    [content_type: @content_type,
+     persistent: true,
+     message_id: job.id,
+     app_id: application.id]
   end
 
   @doc false
@@ -137,7 +140,7 @@ defmodule Roger.Job do
        ArgumentError ->
          {:error, "Job decoding error"}
      end)
-    |> validate
+     |> validate
   end
 
   def encode(job) do

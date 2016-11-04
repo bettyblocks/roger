@@ -14,23 +14,19 @@ defmodule Roger.Application.Retry do
     @one_second 1000
   end
 
+  @doc """
+  Given an AMQP channel and the application, queues the given job for retry.
+  """
   def retry(channel, application, job) do
 
     {queue, expiration} = setup_retry_queue(channel, application, job)
-
-    opts = [
-      content_type: "application/json",
-      persistent: true,
-      message_id: job.id,
-      app_id: application.id,
-    ]
 
     payload = Job.encode(%Job{job | retry_count: job.retry_count + 1})
     opts_extra = case expiration do
                    :buried -> []
                    _ -> [expiration: Integer.to_string(expiration)]
                  end
-    AMQP.Basic.publish(channel, "", queue, payload, opts ++ opts_extra)
+    AMQP.Basic.publish(channel, "", queue, payload, Job.publish_opts(job, application) ++ opts_extra)
     {:ok, expiration}
   end
 
@@ -49,7 +45,7 @@ defmodule Roger.Application.Retry do
     {queue_name, arguments} = if expiration == :buried do
       {Queue.make_name(application, queue_type, ".buried"), arguments}
     else
-      {Queue.make_name(application, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration * 2}]}
+      {Queue.make_name(application, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration + 2000}]}
     end
 
     {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, arguments: arguments)
