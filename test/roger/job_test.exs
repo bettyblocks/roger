@@ -69,6 +69,21 @@ defmodule Roger.JobTest do
   end
 
   test "invalid decoded job, unknown module" do
+    payload = :erlang.term_to_binary(%Job{id: "asdf", module: NoExistingModule})
+    {:error, msg} = Job.decode(payload)
+    assert Regex.match? ~r/Unknown job module/, msg
+  end
+
+  defmodule MyCustomJob do
+  end
+
+  test "invalid decoded job, invalid Job module" do
+    payload = :erlang.term_to_binary(%Job{id: "asdf", module: MyCustomJob})
+    {:error, msg} = Job.decode(payload)
+    assert Regex.match? ~r/Invalid job module/, msg
+  end
+
+  test "invalid decoded job, unknown module (string)" do
     payload = :erlang.term_to_binary(%Job{id: "asdf", module: "NoExisting"})
     {:error, msg} = Job.decode(payload)
     assert Regex.match? ~r/Job module must be an atom/, msg

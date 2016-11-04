@@ -158,8 +158,19 @@ defmodule Roger.Job do
     {:error, "Job module must be an atom"}
   end
 
-  defp validate(%__MODULE__{} = job) do
-    {:ok, job}
+  defp validate(%__MODULE__{module: module} = job) do
+    case :code.ensure_loaded(module) do
+      {:error, :nofile} ->
+        {:error, "Unknown job module: #{module}"}
+      {:module, ^module} ->
+        functions = module.__info__(:functions)
+        case Enum.member?(functions, {:perform, 1}) do
+          false ->
+            {:error, "Invalid job module: #{module} does not implement Roger.Job"}
+          true ->
+            {:ok, job}
+        end
+    end
   end
 
   def queue_type(%__MODULE__{} = job) do
