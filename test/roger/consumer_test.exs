@@ -106,17 +106,18 @@ defmodule Roger.Application.ConsumerTest do
     :ok = Global.queue_pause(app, :default)
     :timer.sleep 50
 
-     {:ok, job} = Job.create(TestJob, :job_4)
+    {:ok, job} = Job.create(TestJob, :job_4)
     Job.enqueue(job, app)
 
-    # pid = Roger.GProc.whereis({:app_job_consumer, "test"})
-    # Process.exit(pid, :kill)
+    pid = Roger.GProc.whereis({:app_job_consumer, "test"})
+    Process.exit(pid, :normal)
 
-    refute_receive {:done, :job_4}
+    refute_receive {:done, :job_4}, 200
 
     :ok = Global.queue_resume(app, :default)
 
     assert_receive {:done, :job_4}
+
 
   end
 

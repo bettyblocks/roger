@@ -1,6 +1,37 @@
 defmodule Roger.Application.Global do
   @moduledoc """
-  Global application state
+  Coordinates the global Roger application state
+
+  Each Roger application has a single place where global state is
+  kept. Global state (and global coordination) is needed for the
+  following things:
+
+  - Job cancellation; when cancelling a job, we store the job ID
+    globally; when the cancelled job is started, we check the job id
+    against this list of cancelled ids.
+
+  - Queue keys; some jobs dictate that they cannot be queued when
+    there is already a job queued with an identical queue key; if so,
+    the job fails to enqueue.
+
+  - Execution keys; jobs which have the same execution key cannot be
+    executed concurrently and need to wait on one another.
+
+  - Pause states; it is globally stored which queues are currently
+    paused.
+
+  The per-application Global process stores all this information. It
+  provides hooks to persist the information between application / node
+  restarts. By default, the global state is loaded from and written to
+  the filesystem, but it is possible to override the persister, like this:
+
+      config :roger, Roger.Application.Global,
+        persister: Your.PersisterModule
+
+  The persister module must implement the
+  `Roger.Application.Global.StatePersister` behaviour, which provides
+  simple load and save functions.
+
   """
 
   use GenServer
@@ -8,6 +39,8 @@ defmodule Roger.Application.Global do
   require Logger
   alias Roger.{Application, KeySet, System}
   alias Roger.Application.Global.State
+
+  @persister_module Elixir.Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Application.Global.StatePersister.Filesystem
 
   def cancel_job(application, job_id) do
     GenServer.call(global_name(application), {:cancel, job_id})
@@ -61,70 +94,98 @@ defmodule Roger.Application.Global do
 
   ## Server side
 
+  @save_interval 1000
+
   def init([application]) do
-    {:ok, cancel_set} = KeySet.start_link
-    {:ok, queue_set} = KeySet.start_link
-    {:ok, execute_set} = KeySet.start_link
-    state = %State{
-      application: application,
-      cancel_set: cancel_set,
-      execute_set: execute_set,
-      queue_set: queue_set}
-    {:ok, state}
+    Process.send_after(self(), :save, @save_interval)
+    {:ok, load(application)}
   end
 
   def handle_call({:cancel, job_id}, _from, state) do
     KeySet.add(state.cancel_set, job_id)
     System.cast(:cancel, job_id: job_id)
-    {:reply, :ok, state}
+    {:reply, :ok, State.set_dirty(state)}
   end
 
   def handle_call({:is_cancelled, job_id, remove}, _from, state) do
     reply = KeySet.contains?(state.cancel_set, job_id)
     if reply and remove == :remove do
       KeySet.remove(state.cancel_set, job_id)
+      {:reply, reply, State.set_dirty(state)}
+    else
+      {:reply, reply, state}
     end
-    {:reply, reply, state}
   end
 
   def handle_call({:is_queued, queue_key, add}, _from, state) do
     reply = KeySet.contains?(state.queue_set, queue_key)
     if !reply and add == :add do
       KeySet.add(state.queue_set, queue_key)
+      {:reply, reply, State.set_dirty(state)}
+    else
+      {:reply, reply, state}
     end
-    {:reply, reply, state}
   end
 
   def handle_call({:remove_queued, queue_key}, _from, state) do
     reply = KeySet.remove(state.queue_set, queue_key)
-    {:reply, reply, state}
+    {:reply, reply, State.set_dirty(state)}
   end
 
   def handle_call({:is_executing, execute_key, add}, _from, state) do
     reply = KeySet.contains?(state.execute_set, execute_key)
     if !reply and add == :add do
       KeySet.add(state.execute_set, execute_key)
+      {:reply, reply, State.set_dirty(state)}
+    else
+      {:reply, reply, state}
     end
-    {:reply, reply, state}
   end
 
   def handle_call({:remove_executed, execute_key}, _from, state) do
     reply = KeySet.remove(state.execute_set, execute_key)
-    {:reply, reply, state}
+    {:reply, reply, State.set_dirty(state)}
   end
+
+  ## queue pause / resume
 
   def handle_call({:queue_pause, queue}, _from, state) do
     System.cast(:queue_pause, queue: queue, app_id: state.application.id)
-    {:reply, :ok, %{state | paused: MapSet.put(state.paused, queue)}}
+    {:reply, :ok, %{state | paused: MapSet.put(state.paused, queue), dirty: true}}
   end
 
   def handle_call({:queue_resume, queue}, _from, state) do
     System.cast(:queue_resume, queue: queue, app_id: state.application.id)
-    {:reply, :ok, %{state | paused: MapSet.delete(state.paused, queue)}}
+    {:reply, :ok, %{state | paused: MapSet.delete(state.paused, queue), dirty: true}}
   end
 
   def handle_call(:queue_get_paused, _from, state) do
     {:reply, state.paused, state}
+  end
+
+  ## persistence
+
+  def handle_info(:save, state) do
+    Process.send_after(self(), :save, @save_interval)
+    {:noreply, save(state)}
+  end
+
+  defp load(application) do
+    case @persister_module.load(application.id) do
+      {:ok, data} ->
+        state = State.deserialize(data)
+        %State{state | application: application}
+      {:error, _} ->
+        State.new(application)
+    end
+  end
+
+  defp save(%State{dirty: false} = state) do
+    state
+  end
+  defp save(state) do
+    @persister_module.store(state.application.id, State.serialize(state))
+    %State{state | dirty: false}
   end
 
 end

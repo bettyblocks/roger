@@ -1,8 +1,19 @@
 defmodule Roger.Application.Global.State do
   @moduledoc false
-  defstruct application: nil, cancel_set: nil, queue_set: nil, execute_set: nil, paused: MapSet.new
+  defstruct application: nil, cancel_set: nil, queue_set: nil, execute_set: nil, paused: MapSet.new, dirty: false
 
   alias Roger.KeySet
+
+  def new(application) do
+    {:ok, cancel_set} = KeySet.start_link
+    {:ok, queue_set} = KeySet.start_link
+    {:ok, execute_set} = KeySet.start_link
+    %__MODULE__{
+      application: application,
+      cancel_set: cancel_set,
+      execute_set: execute_set,
+      queue_set: queue_set}
+  end
 
   def serialize(struct) do
     {:ok, cancel_set} = KeySet.get_state(struct.cancel_set)
@@ -35,4 +46,9 @@ defmodule Roger.Application.Global.State do
     KeySet.union(a.execute_set, b.execute_set)
     %__MODULE__{a | paused: MapSet.union(a.paused, b.paused)}
   end
+
+  def set_dirty(struct) do
+    %__MODULE__{struct | dirty: true}
+  end
+
 end
