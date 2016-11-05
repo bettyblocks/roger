@@ -1,4 +1,4 @@
-defmodule Roger.Application.StateManager do
+defmodule Roger.Application.Global do
   @moduledoc """
   Global application state
   """
@@ -7,6 +7,7 @@ defmodule Roger.Application.StateManager do
 
   require Logger
   alias Roger.{Application, KeySet, System}
+  alias Roger.Application.Global.State
 
   def cancel_job(application, job_id) do
     GenServer.call(global_name(application), {:cancel, job_id})
@@ -54,50 +55,11 @@ defmodule Roger.Application.StateManager do
     global_name(id)
   end
   def global_name(id) when is_binary(id) do
-    {:global, {:app_state_manager, id}}
+    {:global, {:app_global, id}}
   end
 
 
   ## Server side
-
-  defmodule State do
-    @moduledoc false
-    defstruct application: nil, cancel_set: nil, queue_set: nil, execute_set: nil, paused: MapSet.new
-
-    @keysets ~w(cancel_set queue_set execute_set)a
-
-    def serialize(struct) do
-      {:ok, cancel_set} = KeySet.get_state(struct.cancel_set)
-      {:ok, queue_set} = KeySet.get_state(struct.queue_set)
-      {:ok, execute_set} = KeySet.get_state(struct.execute_set)
-      %{
-        cancel_set: cancel_set,
-        queue_set: queue_set,
-        execute_set: execute_set,
-        paused: struct.paused
-      }
-      |> :erlang.term_to_binary
-    end
-
-    def deserialize(data) do
-      struct = :erlang.binary_to_term(data)
-      {:ok, cancel_set} = KeySet.start_link(state: struct[:cancel_set])
-      {:ok, queue_set} = KeySet.start_link(state: struct[:queue_set])
-      {:ok, execute_set} = KeySet.start_link(state: struct[:execute_set])
-      %State{
-        cancel_set: cancel_set,
-        queue_set: queue_set,
-        execute_set: execute_set,
-        paused: struct.paused}
-    end
-
-    def merge(a, b) do
-      KeySet.union(a.cancel_set, b.cancel_set)
-      KeySet.union(a.queue_set, b.queue_set)
-      KeySet.union(a.execute_set, b.execute_set)
-      %__MODULE__{a | paused: MapSet.union(a.paused, b.paused)}
-    end
-  end
 
   def init([application]) do
     {:ok, cancel_set} = KeySet.start_link

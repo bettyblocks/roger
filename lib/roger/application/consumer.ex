@@ -12,7 +12,7 @@ defmodule Roger.Application.Consumer do
   require Logger
   alias Roger.{Queue, GProc, Application,
                Application.WorkerSupervisor,
-               Application.StateManager}
+               Application.Global}
 
   use GenServer
 
@@ -56,7 +56,7 @@ defmodule Roger.Application.Consumer do
   end
 
   def init([application]) do
-    paused = StateManager.queue_get_paused(application)
+    paused = Global.queue_get_paused(application)
     {:ok, %State{application: application, paused: paused}, 0}
   end
 

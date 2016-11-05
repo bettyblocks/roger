@@ -4,7 +4,7 @@ defmodule Roger.Job.CancelTest do
 
   alias Roger.Job
 
-  alias Roger.{Application, Queue, Application.StateManager}
+  alias Roger.{Application, Queue, Application.Global}
 
   defmodule CancelCallbacks do
     use Roger.Application.Worker.Callback
@@ -24,16 +24,16 @@ defmodule Roger.Job.CancelTest do
   test "statemanager cancel logic", %{app: app} do
     {:ok, job} = Job.create(MyJob, [2])
 
-    assert :ok = StateManager.cancel_job(app, job.id)
+    assert :ok = Global.cancel_job(app, job.id)
 
     # When calling is_cancelled, state is not touched
-    assert true == StateManager.cancelled?(app, job.id)
-    assert true == StateManager.cancelled?(app, job.id)
+    assert true == Global.cancelled?(app, job.id)
+    assert true == Global.cancelled?(app, job.id)
 
     # When called with :remove option, the id is removed from the
     # cancel set
-    assert true == StateManager.cancelled?(app, job.id, :remove)
-    assert false == StateManager.cancelled?(app, job.id, :remove)
+    assert true == Global.cancelled?(app, job.id, :remove)
+    assert false == Global.cancelled?(app, job.id, :remove)
 
   end
 
@@ -41,7 +41,7 @@ defmodule Roger.Job.CancelTest do
   test "it can cancel a job that's in the queue", %{app: app} do
     {:ok, job} = Job.create(MyJob, [2])
     :ok = Job.enqueue(job, app)
-    assert :ok = StateManager.cancel_job(app, job.id)
+    assert :ok = Global.cancel_job(app, job.id)
 
     receive do
       {:cancel, id} ->
@@ -75,7 +75,7 @@ defmodule Roger.Job.CancelTest do
     end
 
     # Now cancel it
-    assert :ok = StateManager.cancel_job(app, job.id)
+    assert :ok = Global.cancel_job(app, job.id)
 
     # Wait until the on_cancel callback fires
     receive do

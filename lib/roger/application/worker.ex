@@ -20,7 +20,7 @@ defmodule Roger.Application.Worker do
   require Logger
 
   alias Roger.{Job, GProc, Queue, Application.Retry}
-  alias Roger.Application.StateManager
+  alias Roger.Application.Global
 
   use GenServer
 
@@ -51,12 +51,12 @@ defmodule Roger.Application.Worker do
   def handle_info(:timeout, state) do
     case Job.decode(state.raw_payload) do
       {:ok, job} ->
-        if StateManager.cancelled?(state.application, job.id, :remove) do
+        if Global.cancelled?(state.application, job.id, :remove) do
           callback(:on_cancel, [state.application, job])
           job_done(job, :ack, state)
         else
 
-          if job.execution_key != nil and StateManager.executing?(state.application, job.execution_key, :add) do
+          if job.execution_key != nil and Global.executing?(state.application, job.execution_key, :add) do
             # put job in the waiting queue,
             :ok = put_execution_waiting(job, state)
             # then ack it.
@@ -99,12 +99,12 @@ defmodule Roger.Application.Worker do
 
     if job != nil do
       if job.queue_key != nil do
-        :ok = StateManager.remove_queued(state.application, job.queue_key)
+        :ok = Global.remove_queued(state.application, job.queue_key)
       end
 
       if job.execution_key != nil do
         # mark as "free"
-        :ok = StateManager.remove_executed(state.application, job.execution_key)
+        :ok = Global.remove_executed(state.application, job.execution_key)
         # check if there are any messages in the waiting queue
         check_execution_waiting(job, state)
       end

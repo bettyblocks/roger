@@ -5,7 +5,7 @@ defmodule Roger.Application.ConsumerTest do
   doctest Roger.Application.Consumer
 
   alias Roger.{Application, Application.Consumer, Queue, Job,
-               Application.StateManager}
+               Application.Global}
 
   test "consumer starting", %{app: app} do
 
@@ -83,9 +83,9 @@ defmodule Roger.Application.ConsumerTest do
   end
 
 
-  test "pause/resume state through StateManager", %{app: app} do
+  test "pause/resume state through Global", %{app: app} do
 
-    :ok = StateManager.queue_pause(app, :default)
+    :ok = Global.queue_pause(app, :default)
     :timer.sleep 50
 
     {:ok, job} = Job.create(TestJob, :job_3)
@@ -94,16 +94,16 @@ defmodule Roger.Application.ConsumerTest do
 
     refute_receive {:done, :job_3}
 
-    :ok = StateManager.queue_resume(app, :default)
+    :ok = Global.queue_resume(app, :default)
 
     assert_receive {:done, :job_3}
 
   end
 
 
-  test "pause/resume state through StateManager, consumer restart in between", %{app: app} do
+  test "pause/resume state through Global, consumer restart in between", %{app: app} do
 
-    :ok = StateManager.queue_pause(app, :default)
+    :ok = Global.queue_pause(app, :default)
     :timer.sleep 50
 
      {:ok, job} = Job.create(TestJob, :job_4)
@@ -114,7 +114,7 @@ defmodule Roger.Application.ConsumerTest do
 
     refute_receive {:done, :job_4}
 
-    :ok = StateManager.queue_resume(app, :default)
+    :ok = Global.queue_resume(app, :default)
 
     assert_receive {:done, :job_4}
 

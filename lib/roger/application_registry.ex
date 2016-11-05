@@ -2,7 +2,7 @@ defmodule Roger.ApplicationRegistry do
   @moduledoc false
 
   use GenServer
-  alias Roger.{Application, Application.Consumer, System, Application.StateManager}
+  alias Roger.{Application, Application.Consumer, System, Application.Global}
 
   require Logger
 
@@ -78,7 +78,7 @@ defmodule Roger.ApplicationRegistry do
   defp start_application(application, state) do
     if System.connected? do
       # make sure a statemanager instance is running
-      Singleton.start_child(StateManager, [application], {:app_state_manager, application.id})
+      Singleton.start_child(Global, [application], {:app_global, application.id})
       # start application supervision tree
       pid = case Roger.ApplicationSupervisor.start_child(application) do
               {:ok, pid} ->

@@ -36,7 +36,7 @@ defmodule Roger.Job do
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count)a}
   defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0
 
-  alias Roger.{Application, Queue, Application.StateManager, Job}
+  alias Roger.{Application, Queue, Application.Global, Job}
 
   require Logger
 
@@ -51,7 +51,7 @@ defmodule Roger.Job do
     # Check the queue key; when there is a queue key and it is not
     # queued, immediately add it to the queue key set to prevent
     # races.
-    if job.queue_key != nil and StateManager.queued?(application, job.queue_key, :add) do
+    if job.queue_key != nil and Global.queued?(application, job.queue_key, :add) do
       {:error, :duplicate}
     else
       Roger.AMQPClient.publish("", queue, encode(job), Job.publish_opts(job, application))
