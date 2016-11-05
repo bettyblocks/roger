@@ -107,15 +107,18 @@ defmodule Roger.Application.Consumer do
     queue = find_queue_by_tag(meta.consumer_tag, state)
     if queue != nil do
       if !MapSet.member?(state.paused, queue.type) do
+        # Start handling the message
         {:ok, _pid} = WorkerSupervisor.start_child(state.application, queue.channel, payload, meta)
         {:noreply, state}
       else
+        # We got a message but for a queue that was paused. Stop consuming the queue.
         state = pause_queue(queue, state)
         AMQP.Basic.nack(queue.channel, meta.delivery_tag)
         {:noreply, state}
       end
     else
       if Map.has_key?(state.closing, meta.consumer_tag) do
+        # got a message for a channel that is in the process of closing
         AMQP.Basic.nack(state.closing[meta.consumer_tag], meta.delivery_tag)
       end
       {:noreply, state}
@@ -200,7 +203,7 @@ defmodule Roger.Application.Consumer do
           q
         end
       end)
-      %{state | queues: queues}
+      %{state | queues: queues, closing: Map.put(state.closing, queue.consumer_tag, queue.channel)}
     else
       state
     end
