@@ -1,6 +1,8 @@
 defmodule Roger.Integration.Slave do
+  @moduledoc false
 
   defmodule WorkerCallback do
+    @moduledoc false
     use Roger.Application.Worker.Callback
 
     def after_run(_app, job, _, _) do
@@ -11,6 +13,7 @@ defmodule Roger.Integration.Slave do
   use GenServer
 
   defmodule State do
+    @moduledoc false
     defstruct master: nil, done_count: 0
   end
 

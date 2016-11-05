@@ -1,6 +1,9 @@
 defmodule Roger.Integration.Jobs do
+  @moduledoc false
 
   defmodule TestJob do
+    @moduledoc false
+
     use Roger.Job
     require Logger
 

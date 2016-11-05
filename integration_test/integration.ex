@@ -1,4 +1,5 @@
 defmodule Roger.Integration do
+  @moduledoc false
 
   require Logger
 

@@ -1,5 +1,7 @@
 defmodule Roger.ApplicationRegistry do
-  @moduledoc false
+  @moduledoc """
+  Per-node registry of all applications that are started.
+  """
 
   use GenServer
   alias Roger.{Application, Application.Consumer, System, Application.Global}
@@ -25,6 +27,7 @@ defmodule Roger.ApplicationRegistry do
   end
 
   defmodule State do
+    @moduledoc false
     defstruct waiting: %{}, monitored: %{}
   end
 
