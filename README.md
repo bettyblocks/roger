@@ -1,4 +1,4 @@
-# Roger: Multi-tenant job processor
+# Roger: Multi-tenant, high performance job processing system
 
 [![Build Status](https://travis-ci.org/bettyblocks/roger.png?branch=master)](https://travis-ci.org/bettyblocks/roger)
 

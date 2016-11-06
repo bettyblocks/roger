@@ -8,11 +8,29 @@ defmodule Roger.Mixfile do
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps()]
+     description: description(),
+     package: package(),
+     source_url: "https://github.com/bettyblocks/roger",
+     homepage_url: "https://github.com/bettyblocks/roger",
+     deps: deps(),
+     docs: [extras: ["docs/overview.md", "docs/configuration.md"]]
+    ]
   end
 
   defp elixirc_paths(:prod), do: ["lib"]
   defp elixirc_paths(_),     do: ["lib", "test/support", "integration_test"]
+
+  defp description do
+    "Multi-tenant, high performance job processing system using RabbitMQ"
+  end
+
+  defp package do
+    %{files: ["lib", "mix.exs",
+              "docs/*.md", "LICENSE"],
+      maintainers: ["Arjan Scherpenisse"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/bettyblocks/roger"}}
+  end
 
   # Configuration for the OTP application
   def application do
