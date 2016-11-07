@@ -180,7 +180,11 @@ defmodule Roger.Application.Consumer do
     |> Enum.map(fn(q) ->
       {:ok, channel} = Roger.AMQPClient.open_channel()
       :ok = AMQP.Basic.qos(channel, prefetch_count: q.max_workers)
-      consume(%Queue{q | channel: channel}, state)
+      if !MapSet.member?(state.paused, q.type) do
+        consume(%Queue{q | channel: channel}, state)
+      else
+        %Queue{q | channel: channel}
+      end
     end)
 
     queues = (existing_queues ++ new_queues) |> Enum.sort(&(&1.type < &2.type))
