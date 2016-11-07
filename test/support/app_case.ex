@@ -9,6 +9,9 @@ defmodule Roger.AppCase do
       alias Roger.{Application, Queue, Job}
 
       setup do
+
+        on_exit fn -> File.rm("/tmp/test.state") end
+
         # empty the default queue first
         {:ok, channel} = Roger.AMQPClient.open_channel
         AMQP.Queue.declare(channel, "test-default")

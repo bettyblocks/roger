@@ -52,7 +52,7 @@ defmodule Roger.Application.Consumer do
 
   defmodule State do
     @moduledoc false
-    defstruct application: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}
+    defstruct application: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}, pausing: %{}
   end
 
   def init([application]) do
@@ -99,7 +99,11 @@ defmodule Roger.Application.Consumer do
       :ok = AMQP.Channel.close(state.closing[consumer_tag])
       {:noreply, %{state | closing: Map.delete(state.closing, consumer_tag)}}
     else
-      {:noreply, state}
+      if Map.has_key?(state.pausing, consumer_tag) do
+        {:noreply, %{state | pausing: Map.delete(state.pausing, consumer_tag)}}
+      else
+        {:noreply, state}
+      end
     end
   end
 
@@ -117,9 +121,9 @@ defmodule Roger.Application.Consumer do
         {:noreply, state}
       end
     else
-      if Map.has_key?(state.closing, meta.consumer_tag) do
-        # got a message for a channel that is in the process of closing
-        AMQP.Basic.nack(state.closing[meta.consumer_tag], meta.delivery_tag)
+      if Map.has_key?(state.pausing, meta.consumer_tag) do
+        # got a message for a channel that is in the process of pausing
+        AMQP.Basic.nack(state.pausing[meta.consumer_tag], meta.delivery_tag)
       end
       {:noreply, state}
     end
@@ -203,7 +207,7 @@ defmodule Roger.Application.Consumer do
           q
         end
       end)
-      %{state | queues: queues, closing: Map.put(state.closing, queue.consumer_tag, queue.channel)}
+      %{state | queues: queues, pausing: Map.put(state.pausing, queue.consumer_tag, queue.channel)}
     else
       state
     end
