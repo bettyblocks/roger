@@ -26,6 +26,10 @@ defmodule Roger.ApplicationRegistry do
     end
   end
 
+  def waiting_applications do
+    GenServer.call(__MODULE__, :waiting_applications)
+  end
+
   defmodule State do
     @moduledoc false
     defstruct waiting: %{}, monitored: %{}
@@ -38,6 +42,15 @@ defmodule Roger.ApplicationRegistry do
   def handle_call({:start, application}, _from, state) do
     {reply, state} = start_application(application, state)
     {:reply, reply, state}
+  end
+
+  def handle_call({:stop, application}, _from, state) do
+    {reply, state} = stop_application(application, state)
+    {:reply, reply, state}
+  end
+
+  def handle_call(:waiting_applications, _from, state) do
+    {:reply, Map.values(state.waiting), state}
   end
 
   def handle_info(:timeout, state) do
@@ -95,6 +108,16 @@ defmodule Roger.ApplicationRegistry do
       {{:ok, pid}, %State{state | monitored: Map.put(state.monitored, pid, application)}}
     else
       {:waiting, %State{state | waiting: Map.put(state.waiting, application.id, application)}}
+    end
+  end
+
+  defp stop_application(application, state) do
+    case Roger.GProc.whereis({:app_supervisor, application.id}) do
+      pid when is_pid(pid) ->
+        :ok = Roger.ApplicationSupervisor.stop_child(pid)
+        {:ok, %State{state | monitored: Map.delete(state.monitored, pid)}}
+      :nil ->
+        {{:error, :not_running}, state}
     end
   end
 

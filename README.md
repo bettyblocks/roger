@@ -16,7 +16,7 @@
 - [x] Pausing / unpausing work queues
 - [x] All operations are cluster-aware
 - [x] Retry w/ exponential backoff
-- [ ] Resilient against AMQP network conditions (reconnects, process crashes, etc)
+- [x] Resilient against AMQP network conditions (reconnects, process crashes, etc)
 - [x] Application state persistence between restarts (configurable)
 - [ ] Management API (phoenix mountable); return info from each node
 - [ ] Documentation

@@ -20,4 +20,8 @@ defmodule Roger.ApplicationSupervisor do
     Supervisor.start_child(__MODULE__, [application])
   end
 
+  def stop_child(pid) do
+    Supervisor.terminate_child(__MODULE__, pid)
+  end
+
 end
