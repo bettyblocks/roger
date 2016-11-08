@@ -49,7 +49,7 @@ defmodule Roger.Application.Retry do
       {Queue.make_name(application, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration + 2000}]}
     end
 
-    {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, arguments: arguments)
+    {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, durable: true, arguments: arguments)
     {queue_name, expiration}
   end
 

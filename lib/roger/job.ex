@@ -43,6 +43,13 @@ defmodule Roger.Job do
   @content_type "application/x-erlang-binary"
 
   @doc """
+  Enqueues a job in the given application id.
+  """
+  def enqueue(%__MODULE__{} = job, application_id) when is_binary(application_id) do
+    enqueue(job, %Application{id: application_id}, nil)
+  end
+
+  @doc """
   Enqueues a job in the given application.
   """
   def enqueue(%__MODULE__{} = job, %Application{} = application, override_queue \\ nil) do

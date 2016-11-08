@@ -238,7 +238,7 @@ defmodule Roger.Application.Consumer do
   defp consume(queue, state) do
     queue_name = Queue.make_name(state.application, queue.type)
     # FIXME: do something with stats?
-    {:ok, _stats} = AMQP.Queue.declare(queue.channel, queue_name)
+    {:ok, _stats} = AMQP.Queue.declare(queue.channel, queue_name, durable: true)
     {:ok, consumer_tag} = AMQP.Basic.consume(queue.channel, queue_name)
     %Queue{
       queue |

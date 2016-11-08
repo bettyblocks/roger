@@ -12,7 +12,7 @@ defmodule Roger.AppCase do
 
         # empty the default queue first
         {:ok, channel} = Roger.AMQPClient.open_channel
-        AMQP.Queue.declare(channel, "test-default")
+        AMQP.Queue.declare(channel, "test-default", durable: true)
         AMQP.Queue.purge(channel, "test-default")
 
         Process.register(self(), :testcase)

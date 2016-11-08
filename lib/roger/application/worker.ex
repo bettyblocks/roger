@@ -22,6 +22,9 @@ defmodule Roger.Application.Worker do
   alias Roger.{Job, GProc, Queue, Application.Retry}
   alias Roger.Application.Global
 
+  # after how long the wait queue for execution_key-type jobs expires
+  @execution_waiting_expiry 1800 * 1000
+
   use GenServer
 
   def start_link(application, channel, payload, meta) do
@@ -158,7 +161,7 @@ defmodule Roger.Application.Worker do
   defp execution_waiting_queue(job, state, return \\ :prefixed) do
     bare_name = "execution-waiting-#{job.execution_key}"
     name = Queue.make_name(state.application, bare_name)
-    {:ok, _} = AMQP.Queue.declare(state.channel, name, arguments: [{"x-expires", 1800}])
+    {:ok, _} = AMQP.Queue.declare(state.channel, name, durable: true, arguments: [{"x-expires", @execution_waiting_expiry}])
     case return do
       :prefixed -> name
       :unprefixed -> bare_name
