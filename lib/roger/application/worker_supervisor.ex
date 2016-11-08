@@ -5,16 +5,15 @@ defmodule Roger.Application.WorkerSupervisor do
 
   use Supervisor
 
-  alias Roger.{GProc, Application}
+  alias Roger.GProc
 
   def start_link(application) do
     Supervisor.start_link(__MODULE__, [], name: GProc.via(name(application)))
   end
 
-  defp name(%Application{id: id}) do
+  defp name(id) do
     {:app_worker_supervisor, id}
   end
-
 
   def init([]) do
     children = [

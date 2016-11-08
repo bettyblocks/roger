@@ -2,7 +2,7 @@ defmodule Roger.Worker.CallbacksTest do
   use ExUnit.Case
   use Roger.AppCase
 
-  alias Roger.{Application, Queue, Application.WorkerSupervisor}
+  alias Roger.{Application, Application.WorkerSupervisor}
 
   defmodule TestJob do
     use Roger.Job
@@ -23,9 +23,9 @@ defmodule Roger.Worker.CallbacksTest do
     end
   end
 
-  test "test before-run worker callback", %{app: app} do
+  test "test before-run worker callback" do
     Elixir.Application.put_env(:roger, :callbacks, worker: BeforeRunWorkerCallback)
-    {:ok, _pid} = WorkerSupervisor.start_child(app, :channel, @payload, nil)
+    {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
 
     receive do
       :before_run_ok -> :ok
@@ -44,9 +44,9 @@ defmodule Roger.Worker.CallbacksTest do
     end
   end
 
-  test "test after-run worker callback", %{app: app} do
+  test "test after-run worker callback" do
     Elixir.Application.put_env(:roger, :callbacks, worker: AfterRunWorkerCallback)
-    {:ok, _pid} = WorkerSupervisor.start_child(app, :channel, @payload, nil)
+    {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
 
     receive do
       :after_run_ok -> :ok
@@ -73,9 +73,9 @@ defmodule Roger.Worker.CallbacksTest do
     end
   end
 
-  test "test before-and-after-run worker callbacks with state passing through", %{app: app} do
+  test "test before-and-after-run worker callbacks with state passing through" do
     Elixir.Application.put_env(:roger, :callbacks, worker: BeforeAfterRunWorkerCallback)
-    {:ok, _pid} = WorkerSupervisor.start_child(app, :channel, @payload, nil)
+    {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       {:after_run_ok, r} ->
         assert test_ref() == r
@@ -104,9 +104,9 @@ defmodule Roger.Worker.CallbacksTest do
   @payload :erlang.term_to_binary(%Job{id: "asdf", module: ErrorJob, args: []})
   # @payload ~s({"id": "123", "module": "Elixir.Roger.Worker.CallbacksTest.ErrorJob", "args": []})
 
-  test "test on_error worker callback", %{app: app} do
+  test "test on_error worker callback" do
     Elixir.Application.put_env(:roger, :callbacks, worker: OnErrorWorkerCallback)
-    {:ok, _pid} = WorkerSupervisor.start_child(app, :channel, @payload, nil)
+    {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       :on_error_ok -> :ok
     after 1000 ->

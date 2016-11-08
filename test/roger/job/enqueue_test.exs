@@ -4,8 +4,6 @@ defmodule Roger.Job.EnqueueTest do
 
   alias Roger.Job
 
-  alias Roger.{Application, Queue}
-
 
   defmodule MyCalculation do
     use Roger.Job
@@ -16,36 +14,20 @@ defmodule Roger.Job.EnqueueTest do
 
   end
 
-  test "job enqueue", %{app: app} do
+  test "job enqueue" do
     {:ok, job} = Job.create(MyCalculation, [2])
-    :ok = Job.enqueue(job, app)
+    :ok = Job.enqueue(job, @app)
 
-    receive do
-      4 ->
-        :ok
-    after 1000 ->
-        flunk("Job not executed")
-    end
+    assert_receive 4
   end
 
-  test "non-unique jobs can be enqueued multiple times", %{app: app} do
+  test "non-unique jobs can be enqueued multiple times" do
     {:ok, job} = Job.create(MyCalculation, [2])
-    :ok = Job.enqueue(job, app)
-    :ok = Job.enqueue(job, app)
+    :ok = Job.enqueue(job, @app)
+    :ok = Job.enqueue(job, @app)
 
-    receive do
-      4 ->
-        :ok
-    after 1000 ->
-        flunk("Job 1 not executed")
-    end
-    receive do
-      4 ->
-        :ok
-    after 1000 ->
-        flunk("Job 2 not executed")
-    end
-
+    assert_receive 4
+    assert_receive 4
   end
 
 end

@@ -10,39 +10,36 @@ defmodule Roger.Application.Consumer do
   """
 
   require Logger
-  alias Roger.{Queue, GProc, Application,
+  alias Roger.{Queue, GProc,
                Application.WorkerSupervisor,
                Application.Global}
 
   use GenServer
 
-  def start_link(%Application{} = application) do
-    GenServer.start_link(__MODULE__, [application], name: GProc.via(name(application)))
+  def start_link(application_id) do
+    GenServer.start_link(__MODULE__, [application_id], name: GProc.via(name(application_id)))
   end
 
-  def is_alive?(application) do
-    GProc.is_alive(name(application))
+  def is_alive?(application_id) do
+    GProc.is_alive(name(application_id))
   end
 
-  def get_queues(application) do
-    GenServer.call(GProc.via(name(application)), :get_queues)
+  def get_queues(application_id) do
+    GenServer.call(GProc.via(name(application_id)), :get_queues)
   end
 
-  def reconfigure(application) do
-    GenServer.call(GProc.via(name(application)), {:reconfigure, application})
+  def reconfigure(application_id, queues) do
+    GenServer.call(GProc.via(name(application_id)), {:reconfigure, queues})
   end
 
-  def pause(application, queue) do
-    GenServer.call(GProc.via(name(application)), {:pause, queue})
+  def pause(application_id, queue) do
+    GenServer.call(GProc.via(name(application_id)), {:pause, queue})
   end
 
-  def resume(application, queue) do
-    GenServer.call(GProc.via(name(application)), {:resume, queue})
+  def resume(application_id, queue) do
+    GenServer.call(GProc.via(name(application_id)), {:resume, queue})
   end
 
-  defp name(%Application{id: id}) do
-    name(id)
-  end
   defp name(id) when is_binary(id) do
     {:app_job_consumer, id}
   end
@@ -52,27 +49,35 @@ defmodule Roger.Application.Consumer do
 
   defmodule State do
     @moduledoc false
-    defstruct application: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}, pausing: %{}
+    defstruct application_id: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}, pausing: %{}
   end
 
-  def init([application]) do
-    paused = Global.queue_get_paused(application)
-    {:ok, %State{application: application, paused: paused}, 0}
+  def init([application_id]) do
+    paused = Global.queue_get_paused(application_id)
+    {:ok, %State{application_id: application_id, paused: paused}}
   end
 
   def handle_call(:get_queues, _from, state) do
     # strip channel from the queues
-    queues = state.queues |> Enum.map(fn(q) -> %{q | channel: nil} end)
-    {:reply, queues, state}
+    # queues = state.queues |> Enum.map(fn(q) -> %{q | channel: nil} end)
+    {:ok, channel} = Roger.AMQPClient.open_channel()
+    reply = state.queues
+    |> Enum.map(fn(q) ->
+      paused = MapSet.member?(state.paused, q.type)
+      queue_name = Queue.make_name(state.application_id, q.type)
+      {:ok, stats} = AMQP.Queue.declare(channel, queue_name, durable: true)
+      {q.type, %{max_workers: q.max_workers,
+                 paused: paused,
+                 message_count: stats.message_count,
+                 consumer_count: stats.consumer_count}}
+    end)
+    |> Enum.into(%{})
+    AMQP.Channel.close(channel)
+    {:reply, reply, state}
   end
 
-  def handle_call({:reconfigure, application}, _from, state) do
-    {reply, state} =
-      case reconfigure_valid?(application, state) do
-        :ok -> {:ok, do_reconfigure(state, application)}
-        e -> {e, state}
-      end
-    {:reply, reply, state}
+  def handle_call({:reconfigure, queues}, _from, state) do
+    {:reply, :ok, do_reconfigure(state, queues)}
   end
 
   def handle_call({:pause, queue}, _from, state) do
@@ -112,7 +117,7 @@ defmodule Roger.Application.Consumer do
     if queue != nil do
       if !MapSet.member?(state.paused, queue.type) do
         # Start handling the message
-        {:ok, _pid} = WorkerSupervisor.start_child(state.application, queue.channel, payload, meta)
+        {:ok, _pid} = WorkerSupervisor.start_child(state.application_id, queue.channel, payload, meta)
         {:noreply, state}
       else
         # We got a message but for a queue that was paused. Stop consuming the queue.
@@ -129,31 +134,21 @@ defmodule Roger.Application.Consumer do
     end
   end
 
-  def handle_info(:timeout, state) do
-    {:noreply, do_reconfigure(state, state.application)}
-  end
 
 
   ## Internal functions
 
-  defp reconfigure_valid?(application, state) do
-    if application.id == state.application.id do
-      :ok
-    else
-      {:error, :application_id_change}
-    end
-  end
-
-  defp do_reconfigure(state, application) do
+  defp do_reconfigure(state, new_queues) do
 
     existing_queue_types = (for q <- state.queues, do: q.type) |> Enum.into(MapSet.new)
-    new_queue_types = (for q <- application.queues, do: q.type) |> Enum.into(MapSet.new)
+    new_queues = for {type, max_workers} <- new_queues, do: Queue.define(type, max_workers)
+    new_queue_types = (for q <- new_queues, do: q.type) |> Enum.into(MapSet.new)
 
     pick = fn(types, queues) ->
       queues |> Enum.filter(fn(q) -> MapSet.member?(types, q.type) end)
     end
 
-    # close channels of queues that are not in application.queues
+    # close channels of queues that are not in new_queues
     closing = MapSet.difference(existing_queue_types, new_queue_types)
     |> pick.(state.queues)
     |> Enum.map(fn(q) ->
@@ -169,14 +164,14 @@ defmodule Roger.Application.Consumer do
     |> pick.(state.queues)
     |> Enum.map(fn(q) ->
       # currently, max_workers is the only channel property that can change
-      new_q = Enum.find(application.queues, &(&1.type == q.type))
+      new_q = Enum.find(new_queues, &(&1.type == q.type))
       :ok = AMQP.Basic.qos(q.channel, prefetch_count: new_q.max_workers)
       %{q | max_workers: new_q.max_workers}
     end)
 
     # open channels of queues that are in new queues but not in application queues
     new_queues = MapSet.difference(new_queue_types, existing_queue_types)
-    |> pick.(application.queues)
+    |> pick.(new_queues)
     |> Enum.map(fn(q) ->
       {:ok, channel} = Roger.AMQPClient.open_channel()
       :ok = AMQP.Basic.qos(channel, prefetch_count: q.max_workers)
@@ -189,7 +184,7 @@ defmodule Roger.Application.Consumer do
 
     queues = (existing_queues ++ new_queues) |> Enum.sort(&(&1.type < &2.type))
 
-    %State{state | application: application, queues: queues, closing: closing}
+    %State{state | queues: queues, closing: closing}
   end
 
   defp find_queue_by_tag(consumer_tag, state) do
@@ -236,7 +231,7 @@ defmodule Roger.Application.Consumer do
   end
 
   defp consume(queue, state) do
-    queue_name = Queue.make_name(state.application, queue.type)
+    queue_name = Queue.make_name(state.application_id, queue.type)
     # FIXME: do something with stats?
     {:ok, _stats} = AMQP.Queue.declare(queue.channel, queue_name, durable: true)
     {:ok, consumer_tag} = AMQP.Basic.consume(queue.channel, queue_name)

@@ -1,23 +1,41 @@
 defmodule Roger.ApplicationTest do
   use ExUnit.Case
-  doctest Roger.Application
 
-  alias Roger.{Application, Queue}
+  alias Roger.{NodeInfo, Application, ApplicationSupervisor}
 
-  setup do
-    Elixir.Application.put_env(:roger, :callbacks, application: TestApplications)
-    :ok
+  test "start and stop application through the registry" do
+
+    {:ok, _pid} = Application.start("test", [default: 10])
+
+    assert has_test_app(NodeInfo.running_applications)
+
+    :ok = Application.stop("test")
+    :timer.sleep 50
+
+    assert !has_test_app(NodeInfo.running_applications)
   end
 
-  test "start application" do
-    app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
-    {:ok, _} = Application.start(app)
+  test "automatic restart after supervisor stop" do
+
+    {:ok, pid} = Application.start("test", [default: 10])
+
+    :ok = ApplicationSupervisor.stop_child(pid)
+    :timer.sleep 50
+
+
+    assert !has_test_app(NodeInfo.running_applications)
+    assert has_test_app(NodeInfo.waiting_applications)
+
+    :timer.sleep 1000
+    # it restarts
+
+    assert has_test_app(NodeInfo.running_applications)
+    assert !has_test_app(NodeInfo.waiting_applications)
+
   end
 
-  test "start application is re-entrant" do
-    app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
-    {:ok, pid} = Application.start(app)
-    {:ok, ^pid} = Application.start(app)
+  defp has_test_app(apps) do
+    apps["test"] != nil
   end
 
 end

@@ -4,7 +4,7 @@ defmodule Roger.Job.CancelTest do
 
   alias Roger.Job
 
-  alias Roger.{Application, Queue, Application.Global}
+  alias Roger.{Application, Application.Global}
 
   defmodule CancelCallbacks do
     use Roger.Application.Worker.Callback
@@ -21,27 +21,27 @@ defmodule Roger.Job.CancelTest do
   end
 
 
-  test "statemanager cancel logic", %{app: app} do
+  test "statemanager cancel logic" do
     {:ok, job} = Job.create(MyJob, [2])
 
-    assert :ok = Global.cancel_job(app, job.id)
+    assert :ok = Global.cancel_job(@app, job.id)
 
     # When calling is_cancelled, state is not touched
-    assert true == Global.cancelled?(app, job.id)
-    assert true == Global.cancelled?(app, job.id)
+    assert true == Global.cancelled?(@app, job.id)
+    assert true == Global.cancelled?(@app, job.id)
 
     # When called with :remove option, the id is removed from the
     # cancel set
-    assert true == Global.cancelled?(app, job.id, :remove)
-    assert false == Global.cancelled?(app, job.id, :remove)
+    assert true == Global.cancelled?(@app, job.id, :remove)
+    assert false == Global.cancelled?(@app, job.id, :remove)
 
   end
 
 
-  test "it can cancel a job that's in the queue", %{app: app} do
+  test "it can cancel a job that's in the queue" do
     {:ok, job} = Job.create(MyJob, [2])
-    :ok = Job.enqueue(job, app)
-    assert :ok = Global.cancel_job(app, job.id)
+    :ok = Job.enqueue(job, @app)
+    assert :ok = Global.cancel_job(@app, job.id)
 
     receive do
       {:cancel, id} ->
@@ -62,11 +62,11 @@ defmodule Roger.Job.CancelTest do
     end
   end
 
-  test "it can cancel a job that's running", %{app: app} do
+  test "it can cancel a job that's running" do
 
     # Create and enqueue a job
     {:ok, job} = Job.create(MyCancellableJob, [2])
-    :ok = Job.enqueue(job, app)
+    :ok = Job.enqueue(job, @app)
     # Wait until it says it's running
     receive do
       :job_running -> :ok
@@ -75,7 +75,7 @@ defmodule Roger.Job.CancelTest do
     end
 
     # Now cancel it
-    assert :ok = Global.cancel_job(app, job.id)
+    assert :ok = Global.cancel_job(@app, job.id)
 
     # Wait until the on_cancel callback fires
     receive do

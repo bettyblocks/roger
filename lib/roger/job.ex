@@ -34,7 +34,7 @@ defmodule Roger.Job do
   @type t :: %__MODULE__{}
 
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count)a}
-  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0
+  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0, started_at: 0, queued_at: 0
 
   alias Roger.{Application, Queue, Application.Global, Job}
 
@@ -43,36 +43,30 @@ defmodule Roger.Job do
   @content_type "application/x-erlang-binary"
 
   @doc """
-  Enqueues a job in the given application id.
-  """
-  def enqueue(%__MODULE__{} = job, application_id) when is_binary(application_id) do
-    enqueue(job, %Application{id: application_id}, nil)
-  end
-
-  @doc """
   Enqueues a job in the given application.
   """
-  def enqueue(%__MODULE__{} = job, %Application{} = application, override_queue \\ nil) do
-    queue = Queue.make_name(application, override_queue || queue_type(job))
+  def enqueue(%__MODULE__{} = job, application_id, override_queue \\ nil) do
+    queue = Queue.make_name(application_id, override_queue || queue_type(job))
 
     # Check the queue key; when there is a queue key and it is not
     # queued, immediately add it to the queue key set to prevent
     # races.
-    if job.queue_key != nil and Global.queued?(application, job.queue_key, :add) do
+    if job.queue_key != nil and Global.queued?(application_id, job.queue_key, :add) do
       {:error, :duplicate}
     else
-      Roger.AMQPClient.publish("", queue, encode(job), Job.publish_opts(job, application))
+      job = %Job{job | queued_at: Roger.now}
+      Roger.AMQPClient.publish("", queue, encode(job), Job.publish_opts(job, application_id))
     end
   end
 
   @doc """
   Constructs the AMQP options for publishing the job
   """
-  def publish_opts(%__MODULE__{} = job, %Application{} = application) do
+  def publish_opts(%__MODULE__{} = job, application_id) do
     [content_type: @content_type,
      persistent: true,
      message_id: job.id,
-     app_id: application.id]
+     app_id: application_id]
   end
 
   @doc false

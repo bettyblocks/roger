@@ -16,7 +16,7 @@ defmodule Roger do
       worker(Roger.AMQPClient, [amqp_config]),
       worker(Roger.System, []),
       supervisor(Roger.ApplicationSupervisor, []),
-      worker(Roger.ApplicationRegistry, []),
+      worker(Roger.Application, []),
     ]
 
     opts = [strategy: :one_for_one, name: Roger.Supervisor]
@@ -26,6 +26,13 @@ defmodule Roger do
   @doc false
   def prep_stop(_) do
     Roger.AMQPClient.close()
+  end
+
+  @doc """
+  Returns the current time in milliseconds.
+  """
+  def now() do
+    :os.system_time(1000)
   end
 
 end

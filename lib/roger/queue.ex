@@ -15,8 +15,8 @@ defmodule Roger.Queue do
     %__MODULE__{type: type, max_workers: max_workers}
   end
 
-  def make_name(%Roger.Application{} = application, type, postfix \\ "") do
-    "#{application.id}-#{type}#{postfix}"
+  def make_name(application_id, type, postfix \\ "") do
+    "#{application_id}-#{type}#{postfix}"
   end
 
 end

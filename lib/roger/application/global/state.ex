@@ -1,15 +1,15 @@
 defmodule Roger.Application.Global.State do
   @moduledoc false
-  defstruct application: nil, cancel_set: nil, queue_set: nil, execute_set: nil, paused: MapSet.new, dirty: false
+  defstruct application_id: nil, cancel_set: nil, queue_set: nil, execute_set: nil, paused: MapSet.new, dirty: false
 
   alias Roger.KeySet
 
-  def new(application) do
+  def new(application_id) do
     {:ok, cancel_set} = KeySet.start_link
     {:ok, queue_set} = KeySet.start_link
     {:ok, execute_set} = KeySet.start_link
     %__MODULE__{
-      application: application,
+      application_id: application_id,
       cancel_set: cancel_set,
       execute_set: execute_set,
       queue_set: queue_set}

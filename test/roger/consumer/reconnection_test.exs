@@ -14,10 +14,11 @@ defmodule Roger.Application.Consumer.ReconnectionTest do
 
   end
 
+  @app "test"
+
   setup do
     Process.register(self(), :testcase)
-    app = %Roger.Application{id: "test", queues: [Roger.Queue.define(:default, 10)]}
-    {:ok, _pid} = Roger.Application.start(app)
+    {:ok, _pid} = Roger.Application.start(@app, [default: 10])
 
     on_exit fn ->
       :ok = Application.stop :roger
@@ -25,12 +26,12 @@ defmodule Roger.Application.Consumer.ReconnectionTest do
       :timer.sleep 200
     end
 
-    {:ok, %{app: app}}
+    :ok
   end
 
-  test "reconnect after enqueue job", %{app: app} do
+  test "reconnect after enqueue job" do
     {:ok, job} = Job.create(MyJob, 1)
-    Job.enqueue(job, app)
+    Job.enqueue(job, @app)
     :timer.sleep 10
 
     restart_amqp_connection()
@@ -40,7 +41,7 @@ defmodule Roger.Application.Consumer.ReconnectionTest do
   end
 
 
-  # test "reconnect before enqueue job", %{app: app} do
+  # test "reconnect before enqueue job" do
   #   restart_amqp_connection()
   #   {:ok, job} = Job.create(MyJob, 1)
   #   Job.enqueue(job, app)

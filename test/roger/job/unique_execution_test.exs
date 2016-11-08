@@ -26,6 +26,8 @@ defmodule Roger.Job.UniqueExecutionTest do
     end
   end
 
+  @app "test"
+
   test "jobs with execution key get executed sequentially" do
 
     {:ok, channel} = Roger.AMQPClient.open_channel
@@ -33,22 +35,19 @@ defmodule Roger.Job.UniqueExecutionTest do
     on_exit fn -> Queue.purge(channel, "test-execution-waiting-a") end
 
     Process.register(self(), :testcase)
-    app = %Roger.Application{id: "test", queues: [Roger.Queue.define(:default, 10)]}
-    {:ok, _pid} = Roger.Application.start(app)
-
+    {:ok, _pid} = Roger.Application.start(@app, [default: 10])
 
     {:ok, job} = Roger.Job.create(MyJob, 1)
-    :ok = Roger.Job.enqueue(job, app)
+    :ok = Roger.Job.enqueue(job, @app)
     :timer.sleep 1
     {:ok, job} = Roger.Job.create(MyJob, 2)
-    :ok = Roger.Job.enqueue(job, app)
+    :ok = Roger.Job.enqueue(job, @app)
     :timer.sleep 1
     {:ok, job} = Roger.Job.create(MyJob, 3)
-    :ok = Roger.Job.enqueue(job, app)
+    :ok = Roger.Job.enqueue(job, @app)
     :timer.sleep 1
 
     received = receive_list([])
-    #IO.puts "received: #{inspect received}"
 
     assert received == [start: 1, stop: 1, start: 2, stop: 2, start: 3, stop: 3]
 

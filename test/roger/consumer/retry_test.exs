@@ -23,10 +23,10 @@ defmodule Roger.Application.Consumer.RetryTest do
 
   end
 
-  test "retryable job", %{app: app} do
+  test "retryable job" do
 
     {:ok, job} = Job.create(Retryable, 1)
-    Job.enqueue(job, app)
+    Job.enqueue(job, @app)
 
     for n <- 0..5 do
       assert_receive {:retry, ^n}, 200

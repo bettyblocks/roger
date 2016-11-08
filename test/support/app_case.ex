@@ -5,19 +5,15 @@ defmodule Roger.AppCase do
   using(opts) do
     quote do
 
+      @app "test"
+
       require Logger
       alias Roger.{Application, Queue, Job}
 
       setup do
 
-        # empty the default queue first
-        {:ok, channel} = Roger.AMQPClient.open_channel
-        AMQP.Queue.declare(channel, "test-default", durable: true)
-        AMQP.Queue.purge(channel, "test-default")
-
         Process.register(self(), :testcase)
-        app = %Application{id: "test", queues: [Queue.define(:default, 10)]}
-        {:ok, _pid} = Application.start(app)
+        {:ok, _pid} = Application.start(@app, default: 10)
 
         Elixir.Application.put_env(:roger, :callbacks, unquote(opts)[:callbacks] || [])
 
@@ -25,7 +21,7 @@ defmodule Roger.AppCase do
           Elixir.Application.put_env(:roger, :callbacks, [])
         end
 
-        {:ok, %{app: app}}
+        :ok
       end
 
     end

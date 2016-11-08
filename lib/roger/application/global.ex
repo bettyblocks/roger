@@ -42,51 +42,48 @@ defmodule Roger.Application.Global do
 
   @persister_module Elixir.Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Application.Global.StatePersister.Stub
 
-  def cancel_job(application, job_id) do
-    GenServer.call(global_name(application), {:cancel, job_id})
+  def cancel_job(application_id, job_id) do
+    GenServer.call(global_name(application_id), {:cancel, job_id})
   end
 
-  def cancelled?(application, job_id, remove \\ nil) do
-    GenServer.call(global_name(application), {:is_cancelled, job_id, remove})
+  def cancelled?(application_id, job_id, remove \\ nil) do
+    GenServer.call(global_name(application_id), {:is_cancelled, job_id, remove})
   end
 
-  def queued?(application, queue_key, add \\ nil) do
-    GenServer.call(global_name(application), {:is_queued, queue_key, add})
+  def queued?(application_id, queue_key, add \\ nil) do
+    GenServer.call(global_name(application_id), {:is_queued, queue_key, add})
   end
 
-  def remove_queued(application, queue_key) do
-    GenServer.call(global_name(application), {:remove_queued, queue_key})
+  def remove_queued(application_id, queue_key) do
+    GenServer.call(global_name(application_id), {:remove_queued, queue_key})
   end
 
-  def executing?(application, execution_key, add \\ nil) do
-    GenServer.call(global_name(application), {:is_executing, execution_key, add})
+  def executing?(application_id, execution_key, add \\ nil) do
+    GenServer.call(global_name(application_id), {:is_executing, execution_key, add})
   end
 
-  def remove_executed(application, execution_key) do
-    GenServer.call(global_name(application), {:remove_executed, execution_key})
-  end
-
-  @doc """
-  Cluster-wide pausing of the given queue in the given application.
-  """
-  def queue_pause(application, queue) do
-    GenServer.call(global_name(application), {:queue_pause, queue})
+  def remove_executed(application_id, execution_key) do
+    GenServer.call(global_name(application_id), {:remove_executed, execution_key})
   end
 
   @doc """
-  Cluster-wide pausing of the given queue in the given application.
+  Cluster-wide pausing of the given queue in the given application_id.
   """
-  def queue_resume(application, queue) do
-    GenServer.call(global_name(application), {:queue_resume, queue})
+  def queue_pause(application_id, queue) do
+    GenServer.call(global_name(application_id), {:queue_pause, queue})
   end
 
-  def queue_get_paused(application) do
-    GenServer.call(global_name(application), :queue_get_paused)
+  @doc """
+  Cluster-wide pausing of the given queue in the given application_id.
+  """
+  def queue_resume(application_id, queue) do
+    GenServer.call(global_name(application_id), {:queue_resume, queue})
   end
 
-  def global_name(%Application{id: id}) do
-    global_name(id)
+  def queue_get_paused(application_id) do
+    GenServer.call(global_name(application_id), :queue_get_paused)
   end
+
   def global_name(id) when is_binary(id) do
     {:global, {:app_global, id}}
   end
@@ -96,10 +93,10 @@ defmodule Roger.Application.Global do
 
   @save_interval 1000
 
-  def init([application]) do
+  def init([application_id]) do
     Process.send_after(self(), :save, @save_interval)
-    :ok = @persister_module.init(application.id)
-    {:ok, load(application)}
+    :ok = @persister_module.init(application_id)
+    {:ok, load(application_id)}
   end
 
   def handle_call({:cancel, job_id}, _from, state) do
@@ -151,12 +148,12 @@ defmodule Roger.Application.Global do
   ## queue pause / resume
 
   def handle_call({:queue_pause, queue}, _from, state) do
-    System.cast(:queue_pause, queue: queue, app_id: state.application.id)
+    System.cast(:queue_pause, queue: queue, app_id: state.application_id)
     {:reply, :ok, %{state | paused: MapSet.put(state.paused, queue), dirty: true}}
   end
 
   def handle_call({:queue_resume, queue}, _from, state) do
-    System.cast(:queue_resume, queue: queue, app_id: state.application.id)
+    System.cast(:queue_resume, queue: queue, app_id: state.application_id)
     {:reply, :ok, %{state | paused: MapSet.delete(state.paused, queue), dirty: true}}
   end
 
@@ -171,13 +168,13 @@ defmodule Roger.Application.Global do
     {:noreply, save(state)}
   end
 
-  defp load(application) do
-    case @persister_module.load(application.id) do
+  defp load(application_id) do
+    case @persister_module.load(application_id) do
       {:ok, data} ->
         state = State.deserialize(data)
-        %State{state | application: application}
+        %State{state | application_id: application_id}
       {:error, _} ->
-        State.new(application)
+        State.new(application_id)
     end
   end
 
@@ -185,7 +182,7 @@ defmodule Roger.Application.Global do
     state
   end
   defp save(state) do
-    @persister_module.store(state.application.id, State.serialize(state))
+    @persister_module.store(state.application_id, State.serialize(state))
     %State{state | dirty: false}
   end
 

@@ -5,13 +5,13 @@ defmodule Roger.Application.ContainingSupervisor do
 
   use Supervisor
 
-  alias Roger.{GProc, Application}
+  alias Roger.GProc
 
   def start_link(application) do
     Supervisor.start_link(__MODULE__, [application], name: GProc.via(name(application)))
   end
 
-  defp name(%Application{id: id}) do
+  defp name(id) do
     {:app_supervisor, id}
   end
 
@@ -24,8 +24,5 @@ defmodule Roger.Application.ContainingSupervisor do
 
     supervise(children, strategy: :one_for_one)
   end
-
-
-
 
 end

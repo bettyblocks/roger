@@ -97,11 +97,10 @@ defmodule Roger.Integration do
 
     {:ok, _} = Application.ensure_all_started(:roger)
     app = if node() == @master do
-      %Roger.Application{id: "integration"}
+      Roger.Application.start("integration", [])
     else
-      %Roger.Application{id: "integration", queues: [Roger.Queue.define(:default, 100)]}
+      Roger.Application.start("integration", [default: 100])
     end
-    Roger.Application.start(app)
 
     :pong = Node.ping(@master)
     IO.puts "Node.list: #{inspect Node.list}"
@@ -114,7 +113,7 @@ defmodule Roger.Integration do
 
   def enqueue do
     {:ok, job} = Roger.Job.create(Roger.Integration.Jobs.TestJob, %{foo: "bar"})
-    Roger.Job.enqueue(job, %Roger.Application{id: "integration"})
+    Roger.Job.enqueue(job, "integration")
     job
   end
 

@@ -7,15 +7,21 @@ defmodule RogerTest do
 
     :ok = Application.stop :roger
 
-    Application.put_env(:roger, :applications, example: [default: 10, other: 2])
+    Application.put_env(:roger, :applications, test: [default: 10, other: 2])
 
     :ok = Application.start :roger
 
     :timer.sleep 200
 
-    assert [app] = Roger.ApplicationRegistry.running_applications
-    assert "example" == app.id
-    assert 2 == Enum.count(app.queues)
+    apps = Roger.NodeInfo.running_applications
+    assert apps["test"] != nil
+    assert is_map(apps["test"])
+    assert 2 == Map.values(apps["test"]) |> Enum.count
+    assert is_map(apps["test"][:default])
+    assert is_map(apps["test"][:other])
+
+    assert 10 == apps["test"][:default].max_workers
+    assert 2 == apps["test"][:other].max_workers
 
   end
 
