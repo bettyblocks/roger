@@ -42,26 +42,52 @@ defmodule Roger.Application.Global do
 
   @persister_module Elixir.Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Application.Global.StatePersister.Stub
 
+  @doc """
+  Mark a job id as cancelled.
+
+  This does not check for the validity of the job id. The job will not
+  be removed from the queue, but instead will be removed as soon as
+  it's dequeued.
+
+  When a job is currently executing, the process of a running job will
+  be killed.
+  """
+  @spec cancel_job(application_id :: String.t, job_id :: String.t) :: :ok
   def cancel_job(application_id, job_id) do
     GenServer.call(global_name(application_id), {:cancel, job_id})
   end
 
+  @doc """
+  Check whether a given job id has been marked cancelled
+  """
   def cancelled?(application_id, job_id, remove \\ nil) do
     GenServer.call(global_name(application_id), {:is_cancelled, job_id, remove})
   end
 
+  @doc """
+  Check whether a given queue key has been marked enqueued
+  """
   def queued?(application_id, queue_key, add \\ nil) do
     GenServer.call(global_name(application_id), {:is_queued, queue_key, add})
   end
 
+  @doc """
+  Remove a given queue key
+  """
   def remove_queued(application_id, queue_key) do
     GenServer.call(global_name(application_id), {:remove_queued, queue_key})
   end
 
+  @doc """
+  Check whether a given execution key has been set
+  """
   def executing?(application_id, execution_key, add \\ nil) do
     GenServer.call(global_name(application_id), {:is_executing, execution_key, add})
   end
 
+  @doc """
+  Remove the given execution key
+  """
   def remove_executed(application_id, execution_key) do
     GenServer.call(global_name(application_id), {:remove_executed, execution_key})
   end
@@ -80,10 +106,14 @@ defmodule Roger.Application.Global do
     GenServer.call(global_name(application_id), {:queue_resume, queue})
   end
 
+  @doc """
+  Get the set of paused queues for the given application_id.
+  """
   def queue_get_paused(application_id) do
     GenServer.call(global_name(application_id), :queue_get_paused)
   end
 
+  @doc false
   def global_name(id) when is_binary(id) do
     {:global, {:app_global, id}}
   end

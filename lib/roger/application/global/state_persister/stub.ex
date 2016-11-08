@@ -1,9 +1,9 @@
 defmodule Roger.Application.Global.StatePersister.Stub do
   @moduledoc """
-  Stub module for global state persistence.
+  Stub module for `Roger.Application.Global` state persistence.
 
-  This is the default implementation, which does not actually persist
-  the global application state.
+  This is the default implementation, which **does not** persist any
+  global application state.
 
   """
 

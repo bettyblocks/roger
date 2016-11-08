@@ -43,6 +43,12 @@ defmodule Roger.AMQPClient do
     GenServer.call(__MODULE__, {:publish, exchange, routing_key, payload, opts})
   end
 
+  @doc """
+  Closes the AMQP connection.
+
+  This will cause all running Roger applications to shut down. They
+  will be retried until the connection comes up again.
+  """
   def close do
     GenServer.call(__MODULE__, :close)
   end

@@ -1,7 +1,5 @@
 defmodule Roger.Queue do
-  @moduledoc """
-  Struct which holds information about a single queue.
-  """
+  @moduledoc false
 
   @type t :: %__MODULE__{}
 

@@ -15,10 +15,10 @@ defmodule Roger.AppCase do
         Process.register(self(), :testcase)
         {:ok, _pid} = Application.start(@app, default: 10)
 
-        Elixir.Application.put_env(:roger, :callbacks, unquote(opts)[:callbacks] || [])
+        Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: (unquote(opts)[:callbacks] || nil))
 
         on_exit fn ->
-          Elixir.Application.put_env(:roger, :callbacks, [])
+          Elixir.Application.put_env(:roger, Roger.Application.Worker, [])
         end
 
         :ok

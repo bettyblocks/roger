@@ -24,7 +24,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test before-run worker callback" do
-    Elixir.Application.put_env(:roger, :callbacks, worker: BeforeRunWorkerCallback)
+    Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: BeforeRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
 
     receive do
@@ -45,7 +45,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test after-run worker callback" do
-    Elixir.Application.put_env(:roger, :callbacks, worker: AfterRunWorkerCallback)
+    Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: AfterRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
 
     receive do
@@ -74,7 +74,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test before-and-after-run worker callbacks with state passing through" do
-    Elixir.Application.put_env(:roger, :callbacks, worker: BeforeAfterRunWorkerCallback)
+    Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: BeforeAfterRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       {:after_run_ok, r} ->
@@ -102,10 +102,9 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   @payload :erlang.term_to_binary(%Job{id: "asdf", module: ErrorJob, args: []})
-  # @payload ~s({"id": "123", "module": "Elixir.Roger.Worker.CallbacksTest.ErrorJob", "args": []})
 
   test "test on_error worker callback" do
-    Elixir.Application.put_env(:roger, :callbacks, worker: OnErrorWorkerCallback)
+    Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: OnErrorWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       :on_error_ok -> :ok

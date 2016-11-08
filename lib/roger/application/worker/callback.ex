@@ -7,8 +7,8 @@ defmodule Roger.Application.Worker.Callback do
   which invokes functions on various places in the job's life
   cycle.
 
-      config :roger, :callbacks,
-        worker: MyWorkerModule
+      config :roger, Roger.Application.Worker,
+        callbacks: MyWorkerModule
 
   In this scenario, the mentioned `MyWorkerModule` needs to *use*
   `Roger.Worker.Callback`:
@@ -39,10 +39,38 @@ defmodule Roger.Application.Worker.Callback do
     end
   end
 
-  @callback before_run(Roger.Application.t, Roger.Job.t) :: any
-  @callback after_run(Roger.Application.t, Roger.Job.t, any, any) :: any
-  @callback on_error(Roger.Application.t, Roger.Job.t, any, any) :: any
-  @callback on_cancel(Roger.Application.t, Roger.Job.t) :: any
-  @callback on_buried(Roger.Application.t, Roger.Job.t, any, any) :: any
+  @doc """
+  Executed just before the job is going to run
+  """
+  @callback before_run(String.t, Roger.Job.t) :: any
+
+  @doc """
+  Executed just after the job has ran
+  """
+  @callback after_run(String.t, Roger.Job.t, any, any) :: any
+
+  @doc """
+  Executed when a job has exited with an error
+  """
+  @callback on_error(String.t, Roger.Job.t, any, any) :: any
+
+  @doc """
+  Executed when the job was cancelled
+
+  A job can be cancelled either when it is still in the queue or while
+  it is executing. The cancel callback will be only executed once.
+  """
+  @callback on_cancel(String.t, Roger.Job.t) :: any
+
+
+  @doc """
+  Executed when the job has failed its retry sequence
+
+  Retryable jobs are retried in an exponential fashion. When the job
+  has failed the retry sequence, e.g. it failed every time, it is put
+  in a special queue called "buried". Upon placement in this queue,
+  this callback gets executed.
+  """
+  @callback on_buried(application_id :: String.t, job :: Roger.Job.t, any, any) :: any
 
 end

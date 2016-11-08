@@ -1,12 +1,12 @@
 defmodule Roger.NodeInfo do
   @moduledoc """
-  Get information about the current node's jobs and queues.
+  Get information about the current applications, queues and jobs of this node.
   """
 
   alias Roger.{Application, Application.Consumer, GProc, AMQPClient, Job}
 
   @doc """
-  Retrieve combined application info on all running and waiting applications.
+  Retrieve combined application info on all running and waiting applications, on this node.
   """
   def applications() do
     %{waiting: waiting_applications(),

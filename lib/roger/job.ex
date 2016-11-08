@@ -5,6 +5,13 @@ defmodule Roger.Job do
   To start, `use Roger.Job` in your module. The only required callback
   to implement is the `perform/1` function.
 
+      defmodule TestJob do
+        use Roger.Job
+        def perform(_args) do
+          # perform some work here...
+        end
+      end
+
   Other functions that can be implemented in a job module are the
   following:
 
@@ -69,7 +76,10 @@ defmodule Roger.Job do
      app_id: application_id]
   end
 
-  @doc false
+  @doc """
+  To implement a job module, `use Roger.Job` in your module, and
+  implement its required `perform/1` function.
+  """
   defmacro __using__(_) do
 
     quote do
@@ -133,7 +143,7 @@ defmodule Roger.Job do
   @doc """
   Decode a binary payload into a Job struct, and validates it.
   """
-  @spec decode(String.t) :: Roger.Job.t
+  @spec decode(data :: binary) :: {:ok, Roger.Job.t} | {:error, msg :: String.t}
   def decode(payload) do
     (try do
        {:ok, :erlang.binary_to_term(payload)}
@@ -144,6 +154,10 @@ defmodule Roger.Job do
      |> validate
   end
 
+  @doc """
+  Encodes a job into a binary payload.
+  """
+  @spec encode(job :: Job.t) :: binary
   def encode(job) do
     job |> :erlang.term_to_binary
   end
@@ -174,10 +188,16 @@ defmodule Roger.Job do
     end
   end
 
+  @doc """
+  Given a job, return its queue type
+  """
   def queue_type(%__MODULE__{} = job) do
     job.module.queue_type(job.args)
   end
 
+  @doc """
+  Given a job, return whether it's retryable or not.
+  """
   def retryable?(%__MODULE__{} = job) do
     job.module.retryable?()
   end

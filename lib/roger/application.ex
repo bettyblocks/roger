@@ -1,9 +1,9 @@
 defmodule Roger.Application do
   @moduledoc """
-  Per-node registry of all applications that are started.
+  Per-node registry of all Roger applications that are started.
 
   Roger implements multi-tenancy by dividing all its work between
-  different Applications. (this name might be confusing - an OTP
+  different "Applications". (this name might be confusing - an OTP
   application is something different!)
 
   Each application is identified by a unique ID. Applications have a
@@ -17,18 +17,42 @@ defmodule Roger.Application do
 
   require Logger
 
+  @type queue_def :: {id :: String.t, max_workers :: non_neg_integer}
+
+  @doc false
   def start_link do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @doc """
+  Start a Roger application
+
+  Given a unique ID and a list of queues, starts the application
+  supervision structure. When the application has already been
+  started, this calls `reconfigure/2` instead.
+  """
+  @spec start(id :: String.t, queues :: [queue_def]) :: {:ok, pid}
   def start(id, queues) do
     GenServer.call(__MODULE__, {:start, id, queues})
   end
 
+  @doc """
+  Stop the given Roger application
+  """
+  @spec stop(id :: String.t) :: :ok | {:error, :not_running}
   def stop(id) do
     GenServer.call(__MODULE__, {:stop, id})
   end
 
+  @doc """
+  Reconfigure the given Roger application
+
+  Use this function to adjust the queues for the application. The
+  queues argument is *complete*: any queues that are not mentioned,
+  are stopped and messages in them will no longer be processed on this
+  node.
+  """
+  @spec reconfigure(id :: String.t, queues :: [queue_def]) :: :ok | {:error, :not_running}
   def reconfigure(id, queues) do
     if Consumer.is_alive?(id) do
       Consumer.reconfigure(id, queues)
@@ -90,7 +114,7 @@ defmodule Roger.Application do
     end
   end
 
-  def start_all(applications, state) do
+  defp start_all(applications, state) do
     applications
     |> Enum.reduce(state, fn({id, queues}, state) ->
       {_reply, state} = start_application(id, queues, state)

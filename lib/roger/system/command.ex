@@ -1,8 +1,5 @@
 defmodule Roger.System.Command do
-  @moduledoc """
-
-  Holds information about system commands to coordinate nodes.
-  """
+  @moduledoc false
 
   def new(command, args \\ nil) do
     {command, args}

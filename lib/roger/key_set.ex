@@ -4,22 +4,22 @@ defmodule Roger.KeySet do
   An opaque interface to storing keys and testing set member ship of
   keys. Like a bloom filter, but 100% probabilistic.
 
-  iex> {:ok, pid} = Roger.KeySet.start_link
-  iex> Roger.KeySet.add(pid, "bla")
-  :ok
-  iex> Roger.KeySet.contains?(pid, "bla")
-  true
-  iex> Roger.KeySet.contains?(pid, "beh")
-  false
+      iex> {:ok, pid} = Roger.KeySet.start_link
+      iex> Roger.KeySet.add(pid, "bla")
+      :ok
+      iex> Roger.KeySet.contains?(pid, "bla")
+      true
+      iex> Roger.KeySet.contains?(pid, "beh")
+      false
 
   Keys can also be removed:
 
-  iex> {:ok, pid} = Roger.KeySet.start_link
-  iex> Roger.KeySet.add(pid, "bla")
-  iex> Roger.KeySet.remove(pid, "bla")
-  :ok
-  iex> Roger.KeySet.contains?(pid, "bla")
-  false
+      iex> {:ok, pid} = Roger.KeySet.start_link
+      iex> Roger.KeySet.add(pid, "bla")
+      iex> Roger.KeySet.remove(pid, "bla")
+      :ok
+      iex> Roger.KeySet.contains?(pid, "bla")
+      false
 
   The state of the keyset can be retrieved in binary format. This
   state is to be treated as an opaque datastructure. We can then load
@@ -28,42 +28,45 @@ defmodule Roger.KeySet do
   The state can also be given as an argument when the keyset process
   is started.
 
-  iex> {:ok, pid} = Roger.KeySet.start_link
-  iex> Roger.KeySet.add(pid, "existing")
-  iex> {:ok, state} = Roger.KeySet.get_state(pid)
-  iex> {:ok, pid2} = Roger.KeySet.start_link(state: state)
-  iex> Roger.KeySet.contains?(pid2, "existing")
-  true
+      iex> {:ok, pid} = Roger.KeySet.start_link
+      iex> Roger.KeySet.add(pid, "existing")
+      iex> {:ok, state} = Roger.KeySet.get_state(pid)
+      iex> {:ok, pid2} = Roger.KeySet.start_link(state: state)
+      iex> Roger.KeySet.contains?(pid2, "existing")
+      true
 
   Many keys can also be added at once:
 
-  iex> {:ok, pid} = Roger.KeySet.start_link
-  iex> Roger.KeySet.add_many(pid, ~w(a b c))
-  :ok
-  iex> Roger.KeySet.contains?(pid, "a")
-  true
-  iex> Roger.KeySet.contains?(pid, "b")
-  true
-  iex> Roger.KeySet.contains?(pid, "c")
-  true
+      iex> {:ok, pid} = Roger.KeySet.start_link
+      iex> Roger.KeySet.add_many(pid, ~w(a b c))
+      :ok
+      iex> Roger.KeySet.contains?(pid, "a")
+      true
+      iex> Roger.KeySet.contains?(pid, "b")
+      true
+      iex> Roger.KeySet.contains?(pid, "c")
+      true
 
   Two keysets can also be used in set operations. These will always be
   applied to the first keyset; the second is left untouched:
 
-  iex> {:ok, a} = Roger.KeySet.start_link
-  iex> Roger.KeySet.add_many(a, ~w(a1 a2 a3))
-  iex> {:ok, b} = Roger.KeySet.start_link
-  iex> Roger.KeySet.add_many(b, ~w(b1 b2))
-  iex> Roger.KeySet.union(a, b)
-  :ok
-  iex> Roger.KeySet.contains?(a, "b1")
-  true
-  iex> Roger.KeySet.contains?(b, "a1")
-  false
-  iex> Roger.KeySet.difference(a, b)
-  :ok
-  iex> Roger.KeySet.contains?(a, "b1")
-  false
+      iex> {:ok, a} = Roger.KeySet.start_link
+      iex> Roger.KeySet.add_many(a, ~w(a1 a2 a3))
+      iex> {:ok, b} = Roger.KeySet.start_link
+      iex> Roger.KeySet.add_many(b, ~w(b1 b2))
+      iex> Roger.KeySet.union(a, b)
+      :ok
+      iex> Roger.KeySet.contains?(a, "b1")
+      true
+      iex> Roger.KeySet.contains?(b, "a1")
+      false
+      iex> Roger.KeySet.difference(a, b)
+      :ok
+      iex> Roger.KeySet.contains?(a, "b1")
+      false
+
+  *Note: the current implementation is a MapSet but this is an
+  implementation detail and likely to change.*
 
   """
 

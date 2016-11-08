@@ -1,6 +1,6 @@
 defmodule Roger.Application.Consumer.RetryTest do
   use ExUnit.Case
-  use Roger.AppCase, callbacks: [worker: Roger.Application.Consumer.RetryTest.Callbacks]
+  use Roger.AppCase, callbacks: Roger.Application.Consumer.RetryTest.Callbacks
 
   defmodule Callbacks do
     use Roger.Application.Worker.Callback

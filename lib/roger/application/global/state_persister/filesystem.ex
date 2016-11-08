@@ -1,6 +1,7 @@
 defmodule Roger.Application.Global.StatePersister.Filesystem do
   @moduledoc """
-  Basic module implementing filesystem storage for global state persistence.
+
+  Module implementing filesystem storage for `Roger.Application.Global` state persistence.
 
   The path in which the state files are saved can be configured like this:
 

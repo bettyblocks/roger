@@ -18,20 +18,30 @@ defmodule Roger.System do
   require Logger
   alias Roger.System.Command
 
+  @doc false
   def start_link do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @doc """
+  Execute a given command on all nodes, and wait for all nodes to return their values
+  """
   def call(command, args \\ nil) do
     GenServer.call(__MODULE__, {:call, Command.new(command, args)})
   end
 
-  def connected? do
-    GenServer.call(__MODULE__, :is_connected)
-  end
-
+  @doc """
+  Execute a given command on all nodes, does not wait for their completion.
+  """
   def cast(command, args \\ nil) when is_atom(command) do
     GenServer.call(__MODULE__, {:cast, Command.new(command, args)})
+  end
+
+  @doc """
+  Return whether the node is connected to the AMQP broker
+  """
+  def connected? do
+    GenServer.call(__MODULE__, :is_connected)
   end
 
   ###

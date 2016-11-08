@@ -1,6 +1,6 @@
 defmodule Roger.Job.CancelTest do
   use ExUnit.Case
-  use Roger.AppCase, callbacks: [worker: Roger.Job.CancelTest.CancelCallbacks]
+  use Roger.AppCase, callbacks: Roger.Job.CancelTest.CancelCallbacks
 
   alias Roger.Job
 
