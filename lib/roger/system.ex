@@ -22,7 +22,7 @@ defmodule Roger.System do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  def call(command, args \\ nil) when is_atom(command) do
+  def call(command, args \\ nil) do
     GenServer.call(__MODULE__, {:call, Command.new(command, args)})
   end
 
@@ -176,6 +176,10 @@ defmodule Roger.System do
 
   defp dispatch_command({:queue_resume, [queue: queue, app_id: app_id]}) do
     Roger.Application.Consumer.resume(app_id, queue)
+  end
+
+  defp dispatch_command({{:apply, mod, fun}, args}) do
+    Kernel.apply(mod, fun, args)
   end
 
   defp dispatch_command({command, args}) do
