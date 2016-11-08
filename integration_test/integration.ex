@@ -96,7 +96,7 @@ defmodule Roger.Integration do
     create_config()
 
     {:ok, _} = Application.ensure_all_started(:roger)
-    app = if node() == @master do
+    if node() == @master do
       Roger.Application.start("integration", [])
     else
       Roger.Application.start("integration", [default: 100])

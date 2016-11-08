@@ -28,13 +28,12 @@ defmodule Roger.NodeInfo do
 
   When an application is waiting for start, it typically means that
   the application had trouble starting (e.g. due to a failed AMQP
-  connection). When this is the case, the application will be kept in
-  the ApplicationRegistry and retried regularly.
+  connection). When this is the case, the application will be retried
+  regularly.
   """
   def waiting_applications() do
     GenServer.call(Application, :waiting_applications)
   end
-
 
   @doc """
   Retrieve all jobs that are currently running on this node.

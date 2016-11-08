@@ -37,7 +37,7 @@ defmodule Roger.Application.Global do
   use GenServer
 
   require Logger
-  alias Roger.{Application, KeySet, System}
+  alias Roger.{KeySet, System}
   alias Roger.Application.Global.State
 
   @persister_module Elixir.Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Application.Global.StatePersister.Stub

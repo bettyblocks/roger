@@ -3,7 +3,7 @@ defmodule Roger.ApplicationTest do
 
   alias Roger.{NodeInfo, Application, ApplicationSupervisor}
 
-  test "start and stop application through the registry" do
+  test "start and stop application" do
 
     {:ok, _pid} = Application.start("test", [default: 10])
 

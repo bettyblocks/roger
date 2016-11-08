@@ -30,7 +30,11 @@ defmodule Roger.Application do
   end
 
   def reconfigure(id, queues) do
-    Consumer.reconfigure(id, queues)
+    if Consumer.is_alive?(id) do
+      Consumer.reconfigure(id, queues)
+    else
+      {:error, :not_running}
+    end
   end
 
   defmodule State do

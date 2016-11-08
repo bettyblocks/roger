@@ -36,7 +36,7 @@ defmodule Roger.Job do
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count)a}
   defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0, started_at: 0, queued_at: 0
 
-  alias Roger.{Application, Queue, Application.Global, Job}
+  alias Roger.{Queue, Application.Global, Job}
 
   require Logger
 
