@@ -10,8 +10,6 @@ defmodule Roger.AppCase do
 
       setup do
 
-        on_exit fn -> File.rm("/tmp/test.state") end
-
         # empty the default queue first
         {:ok, channel} = Roger.AMQPClient.open_channel
         AMQP.Queue.declare(channel, "test-default")

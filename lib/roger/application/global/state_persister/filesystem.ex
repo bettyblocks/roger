@@ -19,6 +19,10 @@ defmodule Roger.Application.Global.StatePersister.Filesystem do
 
   @storage_dir Application.get_env(:roger, __MODULE__, [])[:path] || "/tmp"
 
+  def init(_id) do
+    :ok
+  end
+
   def load(id) do
     File.read(filename(id))
   end

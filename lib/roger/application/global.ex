@@ -40,7 +40,7 @@ defmodule Roger.Application.Global do
   alias Roger.{Application, KeySet, System}
   alias Roger.Application.Global.State
 
-  @persister_module Elixir.Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Application.Global.StatePersister.Filesystem
+  @persister_module Elixir.Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Application.Global.StatePersister.Stub
 
   def cancel_job(application, job_id) do
     GenServer.call(global_name(application), {:cancel, job_id})
@@ -98,6 +98,7 @@ defmodule Roger.Application.Global do
 
   def init([application]) do
     Process.send_after(self(), :save, @save_interval)
+    :ok = @persister_module.init(application.id)
     {:ok, load(application)}
   end
 
