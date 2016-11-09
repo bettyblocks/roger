@@ -22,12 +22,10 @@ defmodule Roger.Integration.Slave do
   end
 
   def init([master]) do
-    log(master, "Initializing")
     {:ok, %State{master: master}, 0}
   end
 
   def handle_cast({:job_done, _module}, state) do
-    #log(state.master, "Job done: #{module}")
     state = %{state | done_count: state.done_count + 1}
     {:noreply, state}
   end
@@ -39,10 +37,10 @@ defmodule Roger.Integration.Slave do
 
 
   def handle_info(:timeout, state) do
+    Elixir.Application.put_env(:roger, Roger.Application.Worker, [callbacks: WorkerCallback])
+
     {:ok, _} = Application.ensure_all_started(:roger)
     {:ok, _pid} = Roger.Application.start("integration", [default: 10])
-
-    Elixir.Application.put_env(:roger, :callbacks, worker: WorkerCallback)
 
     spawn(fn ->
       :timer.sleep 1000
