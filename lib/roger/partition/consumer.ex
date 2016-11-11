@@ -1,43 +1,43 @@
-defmodule Roger.Application.Consumer do
+defmodule Roger.Partition.Consumer do
   @moduledoc """
 
   Job consumer process.
 
   This process is responsible for maintaining subscriptions to the
-  application's channels and receives jobs. For each job, it spawns
+  partition's channels and receives jobs. For each job, it spawns
   off a worker process.
 
   """
 
   require Logger
   alias Roger.{Queue, GProc,
-               Application.WorkerSupervisor,
-               Application.Global}
+               Partition.WorkerSupervisor,
+               Partition.Global}
 
   use GenServer
 
-  def start_link(application_id) do
-    GenServer.start_link(__MODULE__, [application_id], name: GProc.via(name(application_id)))
+  def start_link(partition_id) do
+    GenServer.start_link(__MODULE__, [partition_id], name: GProc.via(name(partition_id)))
   end
 
-  def is_alive?(application_id) do
-    GProc.is_alive(name(application_id))
+  def is_alive?(partition_id) do
+    GProc.is_alive(name(partition_id))
   end
 
-  def get_queues(application_id) do
-    GenServer.call(GProc.via(name(application_id)), :get_queues)
+  def get_queues(partition_id) do
+    GenServer.call(GProc.via(name(partition_id)), :get_queues)
   end
 
-  def reconfigure(application_id, queues) do
-    GenServer.call(GProc.via(name(application_id)), {:reconfigure, queues})
+  def reconfigure(partition_id, queues) do
+    GenServer.call(GProc.via(name(partition_id)), {:reconfigure, queues})
   end
 
-  def pause(application_id, queue) do
-    GenServer.call(GProc.via(name(application_id)), {:pause, queue})
+  def pause(partition_id, queue) do
+    GenServer.call(GProc.via(name(partition_id)), {:pause, queue})
   end
 
-  def resume(application_id, queue) do
-    GenServer.call(GProc.via(name(application_id)), {:resume, queue})
+  def resume(partition_id, queue) do
+    GenServer.call(GProc.via(name(partition_id)), {:resume, queue})
   end
 
   defp name(id) when is_binary(id) do
@@ -49,12 +49,12 @@ defmodule Roger.Application.Consumer do
 
   defmodule State do
     @moduledoc false
-    defstruct application_id: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}, pausing: %{}
+    defstruct partition_id: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}, pausing: %{}
   end
 
-  def init([application_id]) do
-    paused = Global.queue_get_paused(application_id)
-    {:ok, %State{application_id: application_id, paused: paused}}
+  def init([partition_id]) do
+    paused = Global.queue_get_paused(partition_id)
+    {:ok, %State{partition_id: partition_id, paused: paused}}
   end
 
   def handle_call(:get_queues, _from, state) do
@@ -64,7 +64,7 @@ defmodule Roger.Application.Consumer do
     reply = state.queues
     |> Enum.map(fn(q) ->
       paused = MapSet.member?(state.paused, q.type)
-      queue_name = Queue.make_name(state.application_id, q.type)
+      queue_name = Queue.make_name(state.partition_id, q.type)
       {:ok, stats} = AMQP.Queue.declare(channel, queue_name, durable: true)
       {q.type, %{max_workers: q.max_workers,
                  paused: paused,
@@ -117,7 +117,7 @@ defmodule Roger.Application.Consumer do
     if queue != nil do
       if !MapSet.member?(state.paused, queue.type) do
         # Start handling the message
-        {:ok, _pid} = WorkerSupervisor.start_child(state.application_id, queue.channel, payload, meta)
+        {:ok, _pid} = WorkerSupervisor.start_child(state.partition_id, queue.channel, payload, meta)
         {:noreply, state}
       else
         # We got a message but for a queue that was paused. Stop consuming the queue.
@@ -169,7 +169,7 @@ defmodule Roger.Application.Consumer do
       %{q | max_workers: new_q.max_workers}
     end)
 
-    # open channels of queues that are in new queues but not in application queues
+    # open channels of queues that are in new queues but not in partition queues
     new_queues = MapSet.difference(new_queue_types, existing_queue_types)
     |> pick.(new_queues)
     |> Enum.map(fn(q) ->
@@ -231,7 +231,7 @@ defmodule Roger.Application.Consumer do
   end
 
   defp consume(queue, state) do
-    queue_name = Queue.make_name(state.application_id, queue.type)
+    queue_name = Queue.make_name(state.partition_id, queue.type)
     # FIXME: do something with stats?
     {:ok, _stats} = AMQP.Queue.declare(queue.channel, queue_name, durable: true)
     {:ok, consumer_tag} = AMQP.Basic.consume(queue.channel, queue_name)

@@ -28,7 +28,7 @@ defmodule Roger.Job do
   enqueued, but jobs that have the same execution key will be put in a
   waiting queue and processed serially.
 
-  `queue_type/1` - Specifies which application queue the job will run
+  `queue_type/1` - Specifies which partition queue the job will run
   on. By default, this function returns `:default`, the default queue
   type.
 
@@ -43,37 +43,37 @@ defmodule Roger.Job do
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count)a}
   defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0, started_at: 0, queued_at: 0
 
-  alias Roger.{Queue, Application.Global, Job}
+  alias Roger.{Queue, Partition.Global, Job}
 
   require Logger
 
-  @content_type "application/x-erlang-binary"
+  @content_type "partition/x-erlang-binary"
 
   @doc """
-  Enqueues a job in the given application.
+  Enqueues a job in the given partition.
   """
-  def enqueue(%__MODULE__{} = job, application_id, override_queue \\ nil) do
-    queue = Queue.make_name(application_id, override_queue || queue_type(job))
+  def enqueue(%__MODULE__{} = job, partition_id, override_queue \\ nil) do
+    queue = Queue.make_name(partition_id, override_queue || queue_type(job))
 
     # Check the queue key; when there is a queue key and it is not
     # queued, immediately add it to the queue key set to prevent
     # races.
-    if job.queue_key != nil and Global.queued?(application_id, job.queue_key, :add) do
+    if job.queue_key != nil and Global.queued?(partition_id, job.queue_key, :add) do
       {:error, :duplicate}
     else
       job = %Job{job | queued_at: Roger.now}
-      Roger.AMQPClient.publish("", queue, encode(job), Job.publish_opts(job, application_id))
+      Roger.AMQPClient.publish("", queue, encode(job), Job.publish_opts(job, partition_id))
     end
   end
 
   @doc """
   Constructs the AMQP options for publishing the job
   """
-  def publish_opts(%__MODULE__{} = job, application_id) do
+  def publish_opts(%__MODULE__{} = job, partition_id) do
     [content_type: @content_type,
      persistent: true,
      message_id: job.id,
-     app_id: application_id]
+     app_id: partition_id]
   end
 
   @doc """

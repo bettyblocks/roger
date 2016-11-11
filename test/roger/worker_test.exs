@@ -2,13 +2,13 @@ defmodule Roger.WorkerTest do
   use ExUnit.Case
   #doctest Roger.Worker
 
-  alias Roger.{Application, Application.WorkerSupervisor, Job}
+  alias Roger.{Partition, Partition.WorkerSupervisor, Job}
 
   @app "test"
 
   setup do
     Process.register(self(), :testcase)
-    {:ok, _pid} = Application.start(@app, [default: 10])
+    {:ok, _pid} = Partition.start(@app, [default: 10])
     :ok
   end
 
@@ -25,7 +25,7 @@ defmodule Roger.WorkerTest do
   @payload :erlang.term_to_binary(%Job{id: "asdf", module: TestJob, args: []})
   #@payload ~s({"id": "123", "module": "Elixir.Roger.WorkerTest.TestJob", "args": []})
 
-  test "start worker in application worker supervisor" do
+  test "start worker in partition worker supervisor" do
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       :job_ok -> :ok

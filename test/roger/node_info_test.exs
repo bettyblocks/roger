@@ -1,9 +1,9 @@
-defmodule Roger.Application.NodeInfoTest do
+defmodule Roger.Partition.NodeInfoTest do
   use ExUnit.Case
   use Roger.AppCase
 
   alias Roger.NodeInfo
-  alias Roger.Application.Consumer
+  alias Roger.Partition.Consumer
 
   defmodule SlowTestJob do
     use Job
@@ -14,8 +14,8 @@ defmodule Roger.Application.NodeInfoTest do
     end
   end
 
-  test "get application info" do
-    assert %{waiting: w, running: r} = NodeInfo.applications
+  test "get partition info" do
+    assert %{waiting: w, running: r} = NodeInfo.partitions
     assert is_map(w)
     assert is_map(r)
   end
@@ -52,7 +52,7 @@ defmodule Roger.Application.NodeInfoTest do
   test "get queued jobs" do
     :ok = Consumer.pause(@app, :default)
 
-    apps = NodeInfo.running_applications
+    apps = NodeInfo.running_partitions
 
     assert apps[@app].default.paused
 
@@ -63,7 +63,7 @@ defmodule Roger.Application.NodeInfoTest do
     :ok = Job.enqueue(job, "test")
     :timer.sleep 10
 
-    apps = NodeInfo.running_applications
+    apps = NodeInfo.running_partitions
     q = apps[@app].default
 
     assert q.message_count == 2

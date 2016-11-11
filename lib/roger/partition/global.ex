@@ -1,8 +1,8 @@
-defmodule Roger.Application.Global do
+defmodule Roger.Partition.Global do
   @moduledoc """
-  Coordinates the global Roger application state
+  Coordinates the global Roger partition state
 
-  Each Roger application has a single place where global state is
+  Each Roger partition has a single place where global state is
   kept. Global state (and global coordination) is needed for the
   following things:
 
@@ -20,16 +20,16 @@ defmodule Roger.Application.Global do
   - Pause states; it is globally stored which queues are currently
     paused.
 
-  The per-application Global process stores all this information. It
-  provides hooks to persist the information between application / node
+  The per-partition Global process stores all this information. It
+  provides hooks to persist the information between partition / node
   restarts. By default, the global state is loaded from and written to
   the filesystem, but it is possible to override the persister, like this:
 
-      config :roger, Roger.Application.Global,
+      config :roger, Roger.Partition.Global,
         persister: Your.PersisterModule
 
   The persister module must implement the
-  `Roger.Application.Global.StatePersister` behaviour, which provides
+  `Roger.Partition.Global.StatePersister` behaviour, which provides
   simple load and save functions.
 
   """
@@ -38,9 +38,9 @@ defmodule Roger.Application.Global do
 
   require Logger
   alias Roger.{KeySet, System}
-  alias Roger.Application.Global.State
+  alias Roger.Partition.Global.State
 
-  @persister_module Elixir.Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Application.Global.StatePersister.Stub
+  @persister_module Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Partition.Global.StatePersister.Stub
 
   @doc """
   Mark a job id as cancelled.
@@ -52,65 +52,65 @@ defmodule Roger.Application.Global do
   When a job is currently executing, the process of a running job will
   be killed.
   """
-  @spec cancel_job(application_id :: String.t, job_id :: String.t) :: :ok
-  def cancel_job(application_id, job_id) do
-    GenServer.call(global_name(application_id), {:cancel, job_id})
+  @spec cancel_job(partition_id :: String.t, job_id :: String.t) :: :ok
+  def cancel_job(partition_id, job_id) do
+    GenServer.call(global_name(partition_id), {:cancel, job_id})
   end
 
   @doc """
   Check whether a given job id has been marked cancelled
   """
-  def cancelled?(application_id, job_id, remove \\ nil) do
-    GenServer.call(global_name(application_id), {:is_cancelled, job_id, remove})
+  def cancelled?(partition_id, job_id, remove \\ nil) do
+    GenServer.call(global_name(partition_id), {:is_cancelled, job_id, remove})
   end
 
   @doc """
   Check whether a given queue key has been marked enqueued
   """
-  def queued?(application_id, queue_key, add \\ nil) do
-    GenServer.call(global_name(application_id), {:is_queued, queue_key, add})
+  def queued?(partition_id, queue_key, add \\ nil) do
+    GenServer.call(global_name(partition_id), {:is_queued, queue_key, add})
   end
 
   @doc """
   Remove a given queue key
   """
-  def remove_queued(application_id, queue_key) do
-    GenServer.call(global_name(application_id), {:remove_queued, queue_key})
+  def remove_queued(partition_id, queue_key) do
+    GenServer.call(global_name(partition_id), {:remove_queued, queue_key})
   end
 
   @doc """
   Check whether a given execution key has been set
   """
-  def executing?(application_id, execution_key, add \\ nil) do
-    GenServer.call(global_name(application_id), {:is_executing, execution_key, add})
+  def executing?(partition_id, execution_key, add \\ nil) do
+    GenServer.call(global_name(partition_id), {:is_executing, execution_key, add})
   end
 
   @doc """
   Remove the given execution key
   """
-  def remove_executed(application_id, execution_key) do
-    GenServer.call(global_name(application_id), {:remove_executed, execution_key})
+  def remove_executed(partition_id, execution_key) do
+    GenServer.call(global_name(partition_id), {:remove_executed, execution_key})
   end
 
   @doc """
-  Cluster-wide pausing of the given queue in the given application_id.
+  Cluster-wide pausing of the given queue in the given partition_id.
   """
-  def queue_pause(application_id, queue) do
-    GenServer.call(global_name(application_id), {:queue_pause, queue})
+  def queue_pause(partition_id, queue) do
+    GenServer.call(global_name(partition_id), {:queue_pause, queue})
   end
 
   @doc """
-  Cluster-wide pausing of the given queue in the given application_id.
+  Cluster-wide pausing of the given queue in the given partition_id.
   """
-  def queue_resume(application_id, queue) do
-    GenServer.call(global_name(application_id), {:queue_resume, queue})
+  def queue_resume(partition_id, queue) do
+    GenServer.call(global_name(partition_id), {:queue_resume, queue})
   end
 
   @doc """
-  Get the set of paused queues for the given application_id.
+  Get the set of paused queues for the given partition_id.
   """
-  def queue_get_paused(application_id) do
-    GenServer.call(global_name(application_id), :queue_get_paused)
+  def queue_get_paused(partition_id) do
+    GenServer.call(global_name(partition_id), :queue_get_paused)
   end
 
   @doc false
@@ -123,10 +123,10 @@ defmodule Roger.Application.Global do
 
   @save_interval 1000
 
-  def init([application_id]) do
+  def init([partition_id]) do
     Process.send_after(self(), :save, @save_interval)
-    :ok = @persister_module.init(application_id)
-    {:ok, load(application_id)}
+    :ok = @persister_module.init(partition_id)
+    {:ok, load(partition_id)}
   end
 
   def handle_call({:cancel, job_id}, _from, state) do
@@ -178,12 +178,12 @@ defmodule Roger.Application.Global do
   ## queue pause / resume
 
   def handle_call({:queue_pause, queue}, _from, state) do
-    System.cast(:queue_pause, queue: queue, app_id: state.application_id)
+    System.cast(:queue_pause, queue: queue, app_id: state.partition_id)
     {:reply, :ok, %{state | paused: MapSet.put(state.paused, queue), dirty: true}}
   end
 
   def handle_call({:queue_resume, queue}, _from, state) do
-    System.cast(:queue_resume, queue: queue, app_id: state.application_id)
+    System.cast(:queue_resume, queue: queue, app_id: state.partition_id)
     {:reply, :ok, %{state | paused: MapSet.delete(state.paused, queue), dirty: true}}
   end
 
@@ -198,13 +198,13 @@ defmodule Roger.Application.Global do
     {:noreply, save(state)}
   end
 
-  defp load(application_id) do
-    case @persister_module.load(application_id) do
+  defp load(partition_id) do
+    case @persister_module.load(partition_id) do
       {:ok, data} ->
         state = State.deserialize(data)
-        %State{state | application_id: application_id}
+        %State{state | partition_id: partition_id}
       {:error, _} ->
-        State.new(application_id)
+        State.new(partition_id)
     end
   end
 
@@ -212,7 +212,7 @@ defmodule Roger.Application.Global do
     state
   end
   defp save(state) do
-    @persister_module.store(state.application_id, State.serialize(state))
+    @persister_module.store(state.partition_id, State.serialize(state))
     %State{state | dirty: false}
   end
 

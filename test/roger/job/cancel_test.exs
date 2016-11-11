@@ -4,10 +4,10 @@ defmodule Roger.Job.CancelTest do
 
   alias Roger.Job
 
-  alias Roger.{Application, Application.Global}
+  alias Roger.{Partition, Partition.Global}
 
   defmodule CancelCallbacks do
-    use Roger.Application.Worker.Callback
+    use Roger.Partition.Worker.Callback
 
     def on_cancel(_app, job) do
       send(:testcase, {:cancel, job.id})

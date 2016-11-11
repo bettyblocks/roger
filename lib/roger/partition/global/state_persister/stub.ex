@@ -1,13 +1,13 @@
-defmodule Roger.Application.Global.StatePersister.Stub do
+defmodule Roger.Partition.Global.StatePersister.Stub do
   @moduledoc """
-  Stub module for `Roger.Application.Global` state persistence.
+  Stub module for `Roger.Partition.Global` state persistence.
 
   This is the default implementation, which **does not** persist any
-  global application state.
+  global partition state.
 
   """
 
-  alias Roger.Application.Global.StatePersister
+  alias Roger.Partition.Global.StatePersister
 
   @behaviour StatePersister
 

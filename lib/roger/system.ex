@@ -173,7 +173,7 @@ defmodule Roger.System do
 
   defp dispatch_command({:cancel, [job_id: job_id]}) do
     # Cancel any running jobs
-    worker_name = Roger.Application.Worker.name(job_id)
+    worker_name = Roger.Partition.Worker.name(job_id)
     for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
       Process.exit(pid, :exit)
     end
@@ -181,11 +181,11 @@ defmodule Roger.System do
   end
 
   defp dispatch_command({:queue_pause, [queue: queue, app_id: app_id]}) do
-    Roger.Application.Consumer.pause(app_id, queue)
+    Roger.Partition.Consumer.pause(app_id, queue)
   end
 
   defp dispatch_command({:queue_resume, [queue: queue, app_id: app_id]}) do
-    Roger.Application.Consumer.resume(app_id, queue)
+    Roger.Partition.Consumer.resume(app_id, queue)
   end
 
   defp dispatch_command({{:apply, mod, fun}, args}) do

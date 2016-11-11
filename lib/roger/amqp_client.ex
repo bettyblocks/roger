@@ -46,7 +46,7 @@ defmodule Roger.AMQPClient do
   @doc """
   Closes the AMQP connection.
 
-  This will cause all running Roger applications to shut down. They
+  This will cause all running Roger partitions to shut down. They
   will be retried until the connection comes up again.
   """
   def close do

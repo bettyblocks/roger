@@ -1,15 +1,15 @@
-defmodule Roger.Application.ConsumerTest do
+defmodule Roger.Partition.ConsumerTest do
   use ExUnit.Case
   use Roger.AppCase
 
-  doctest Roger.Application.Consumer
+  doctest Roger.Partition.Consumer
 
-  alias Roger.{Application, Application.Consumer, Job,
-               Application.Global}
+  alias Roger.{Partition, Partition.Consumer, Job,
+               Partition.Global}
 
   test "consumer starting" do
 
-    # Check whether application consumer is alive
+    # Check whether partition consumer is alive
     assert Consumer.is_alive?(@app)
 
     :timer.sleep 50

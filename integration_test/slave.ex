@@ -3,7 +3,7 @@ defmodule Roger.Integration.Slave do
 
   defmodule WorkerCallback do
     @moduledoc false
-    use Roger.Application.Worker.Callback
+    use Roger.Partition.Worker.Callback
 
     def after_run(_app, job, _, _) do
       GenServer.cast(Roger.Integration.Slave, {:job_done, job.module})
@@ -37,10 +37,10 @@ defmodule Roger.Integration.Slave do
 
 
   def handle_info(:timeout, state) do
-    Elixir.Application.put_env(:roger, Roger.Application.Worker, [callbacks: WorkerCallback])
+    Application.put_env(:roger, Roger.Partition.Worker, [callbacks: WorkerCallback])
 
     {:ok, _} = Application.ensure_all_started(:roger)
-    {:ok, _pid} = Roger.Application.start("integration", [default: 10])
+    {:ok, _pid} = Roger.Partition.start("integration", [default: 10])
 
     spawn(fn ->
       :timer.sleep 1000

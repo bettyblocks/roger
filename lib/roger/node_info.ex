@@ -1,22 +1,22 @@
 defmodule Roger.NodeInfo do
   @moduledoc """
-  Get information about the current applications, queues and jobs of this node.
+  Get information about the current partitions, queues and jobs of this node.
   """
 
-  alias Roger.{Application, Application.Consumer, GProc, AMQPClient, Job}
+  alias Roger.{Partition, Partition.Consumer, GProc, AMQPClient, Job}
 
   @doc """
-  Retrieve combined application info on all running and waiting applications, on this node.
+  Retrieve combined partition info on all running and waiting partitions, on this node.
   """
-  def applications() do
-    %{waiting: waiting_applications(),
-      running: running_applications()}
+  def partitions() do
+    %{waiting: waiting_partitions(),
+      running: running_partitions()}
   end
 
   @doc """
-  Retrieve all applications that are currently started on this node.
+  Retrieve all partitions that are currently started on this node.
   """
-  def running_applications() do
+  def running_partitions() do
     for {:app_supervisor, id} <- Roger.GProc.find_names({:app_supervisor, :_}) do
       {id, Consumer.get_queues(id)}
     end
@@ -24,22 +24,22 @@ defmodule Roger.NodeInfo do
   end
 
   @doc """
-  Retrieve all applications that are currently waiting for start.
+  Retrieve all partitions that are currently waiting for start.
 
-  When an application is waiting for start, it typically means that
-  the application had trouble starting (e.g. due to a failed AMQP
-  connection). When this is the case, the application will be retried
+  When an partition is waiting for start, it typically means that
+  the partition had trouble starting (e.g. due to a failed AMQP
+  connection). When this is the case, the partition will be retried
   regularly.
   """
-  def waiting_applications() do
-    GenServer.call(Application, :waiting_applications)
+  def waiting_partitions() do
+    GenServer.call(Partition, :waiting_partitions)
   end
 
   @doc """
   Retrieve all jobs that are currently running on this node.
   """
   def running_jobs() do
-    running_applications()
+    running_partitions()
     |> Enum.map(fn({id, _queues}) ->
       {id, running_jobs(id)}
     end)
@@ -47,7 +47,7 @@ defmodule Roger.NodeInfo do
   end
 
   @doc """
-  Retrieve all running jobs for the given application on this node.
+  Retrieve all running jobs for the given partition on this node.
   """
   def running_jobs(app_id) do
     selector = {:roger_job_worker_meta, app_id, :_}
@@ -57,7 +57,7 @@ defmodule Roger.NodeInfo do
   end
 
   @doc """
-  Retrieve queued jobs for the given application.
+  Retrieve queued jobs for the given partition.
 
   This basically does a `basic.get` AMQP command on the queue and
   requeues the message using a nack.

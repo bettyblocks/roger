@@ -2,7 +2,7 @@ defmodule Roger.Worker.CallbacksTest do
   use ExUnit.Case
   use Roger.AppCase
 
-  alias Roger.{Application, Application.WorkerSupervisor}
+  alias Roger.{Partition, Partition.WorkerSupervisor}
 
   defmodule TestJob do
     use Roger.Job
@@ -16,7 +16,7 @@ defmodule Roger.Worker.CallbacksTest do
   @payload :erlang.term_to_binary(%Job{id: "asdf", module: TestJob, args: []})
 
   defmodule BeforeRunWorkerCallback do
-    use Roger.Application.Worker.Callback
+    use Roger.Partition.Worker.Callback
 
     def before_run(_app, _job) do
       send(:testcase, :before_run_ok)
@@ -24,7 +24,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test before-run worker callback" do
-    Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: BeforeRunWorkerCallback)
+    Application.put_env(:roger, Roger.Partition.Worker, callbacks: BeforeRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
 
     receive do
@@ -37,7 +37,7 @@ defmodule Roger.Worker.CallbacksTest do
 
 
   defmodule AfterRunWorkerCallback do
-    use Roger.Application.Worker.Callback
+    use Roger.Partition.Worker.Callback
 
     def after_run(_app, _job, _result, _state) do
       send(:testcase, :after_run_ok)
@@ -45,7 +45,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test after-run worker callback" do
-    Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: AfterRunWorkerCallback)
+    Application.put_env(:roger, Roger.Partition.Worker, callbacks: AfterRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
 
     receive do
@@ -61,7 +61,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   defmodule BeforeAfterRunWorkerCallback do
-    use Roger.Application.Worker.Callback
+    use Roger.Partition.Worker.Callback
 
     def before_run(_app, _job) do
       Roger.Worker.CallbacksTest.test_ref
@@ -74,7 +74,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test before-and-after-run worker callbacks with state passing through" do
-    Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: BeforeAfterRunWorkerCallback)
+    Application.put_env(:roger, Roger.Partition.Worker, callbacks: BeforeAfterRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       {:after_run_ok, r} ->
@@ -93,7 +93,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   defmodule OnErrorWorkerCallback do
-    use Roger.Application.Worker.Callback
+    use Roger.Partition.Worker.Callback
 
     def on_error(_app, _job, error, _state) do
       {:error, %RuntimeError{}} = error
@@ -104,7 +104,7 @@ defmodule Roger.Worker.CallbacksTest do
   @payload :erlang.term_to_binary(%Job{id: "asdf", module: ErrorJob, args: []})
 
   test "test on_error worker callback" do
-    Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: OnErrorWorkerCallback)
+    Application.put_env(:roger, Roger.Partition.Worker, callbacks: OnErrorWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       :on_error_ok -> :ok

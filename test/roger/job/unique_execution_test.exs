@@ -35,7 +35,7 @@ defmodule Roger.Job.UniqueExecutionTest do
     on_exit fn -> Queue.purge(channel, "test-execution-waiting-a") end
 
     Process.register(self(), :testcase)
-    {:ok, _pid} = Roger.Application.start(@app, [default: 10])
+    {:ok, _pid} = Roger.Partition.start(@app, [default: 10])
 
     {:ok, job} = Roger.Job.create(MyJob, 1)
     :ok = Roger.Job.enqueue(job, @app)

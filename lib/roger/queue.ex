@@ -13,8 +13,8 @@ defmodule Roger.Queue do
     %__MODULE__{type: type, max_workers: max_workers}
   end
 
-  def make_name(application_id, type, postfix \\ "") do
-    "#{application_id}-#{type}#{postfix}"
+  def make_name(partition_id, type, postfix \\ "") do
+    "#{partition_id}-#{type}#{postfix}"
   end
 
 end

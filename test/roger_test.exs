@@ -3,17 +3,17 @@ defmodule RogerTest do
   doctest Roger
 
 
-  test "predefined applications get started automatically" do
+  test "predefined partitions get started automatically" do
 
     :ok = Application.stop :roger
 
-    Application.put_env(:roger, :applications, test: [default: 10, other: 2])
+    Application.put_env(:roger, :partitions, test: [default: 10, other: 2])
 
     :ok = Application.start :roger
 
     :timer.sleep 200
 
-    apps = Roger.NodeInfo.running_applications
+    apps = Roger.NodeInfo.running_partitions
     assert apps["test"] != nil
     assert is_map(apps["test"])
     assert 2 == Map.values(apps["test"]) |> Enum.count

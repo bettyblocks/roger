@@ -97,9 +97,9 @@ defmodule Roger.Integration do
 
     {:ok, _} = Application.ensure_all_started(:roger)
     if node() == @master do
-      Roger.Application.start("integration", [])
+      Roger.Partition.start("integration", [])
     else
-      Roger.Application.start("integration", [default: 100])
+      Roger.Partition.start("integration", [default: 100])
     end
 
     :pong = Node.ping(@master)

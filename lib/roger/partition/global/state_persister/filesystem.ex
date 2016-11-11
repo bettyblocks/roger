@@ -1,11 +1,11 @@
-defmodule Roger.Application.Global.StatePersister.Filesystem do
+defmodule Roger.Partition.Global.StatePersister.Filesystem do
   @moduledoc """
 
-  Module implementing filesystem storage for `Roger.Application.Global` state persistence.
+  Module implementing filesystem storage for `Roger.Partition.Global` state persistence.
 
   The path in which the state files are saved can be configured like this:
 
-      config :roger, Roger.Application.Global.StatePersister.Filesystem,
+      config :roger, Roger.Partition.Global.StatePersister.Filesystem,
         path: "/path/to/files"
 
   Note that in a distributed setup, it does not make sense to use this
@@ -14,7 +14,7 @@ defmodule Roger.Application.Global.StatePersister.Filesystem do
 
   """
 
-  alias Roger.Application.Global.StatePersister
+  alias Roger.Partition.Global.StatePersister
 
   @behaviour StatePersister
 

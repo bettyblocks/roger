@@ -1,4 +1,4 @@
-defmodule Roger.Application.Worker.Callback do
+defmodule Roger.Partition.Worker.Callback do
   @moduledoc """
 
   Provides hooks into the job execution lifecycle.
@@ -7,7 +7,7 @@ defmodule Roger.Application.Worker.Callback do
   which invokes functions on various places in the job's life
   cycle.
 
-      config :roger, Roger.Application.Worker,
+      config :roger, Roger.Partition.Worker,
         callbacks: MyWorkerModule
 
   In this scenario, the mentioned `MyWorkerModule` needs to *use*
@@ -26,13 +26,13 @@ defmodule Roger.Application.Worker.Callback do
     quote do
       @behaviour unquote(__MODULE__)
 
-      def before_run(_application, _job), do: nil
-      def after_run(_application, _job, _result, _before_run_state), do: nil
+      def before_run(_partition, _job), do: nil
+      def after_run(_partition, _job, _result, _before_run_state), do: nil
 
-      def on_error(_application, _job, _error, _before_run_state), do: nil
-      def on_cancel(_application, _job), do: nil
+      def on_error(_partition, _job, _error, _before_run_state), do: nil
+      def on_cancel(_partition, _job), do: nil
 
-      def on_buried(_application, _job, _error, _before_run_state), do: nil
+      def on_buried(_partition, _job, _error, _before_run_state), do: nil
 
       defoverridable before_run: 2, after_run: 4, on_error: 4, on_cancel: 2
 
@@ -71,6 +71,6 @@ defmodule Roger.Application.Worker.Callback do
   in a special queue called "buried". Upon placement in this queue,
   this callback gets executed.
   """
-  @callback on_buried(application_id :: String.t, job :: Roger.Job.t, any, any) :: any
+  @callback on_buried(partition_id :: String.t, job :: Roger.Job.t, any, any) :: any
 
 end

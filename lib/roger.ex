@@ -1,6 +1,6 @@
 defmodule Roger do
   @moduledoc """
-  The OTP application's entrypoint and top-level supervisor
+  The OTP partition's entrypoint and top-level supervisor
   """
 
   use Application
@@ -15,8 +15,8 @@ defmodule Roger do
     children = [
       worker(Roger.AMQPClient, [amqp_config]),
       worker(Roger.System, []),
-      supervisor(Roger.ApplicationSupervisor, []),
-      worker(Roger.Application, []),
+      supervisor(Roger.PartitionSupervisor, []),
+      worker(Roger.Partition, []),
     ]
 
     opts = [strategy: :one_for_one, name: Roger.Supervisor]

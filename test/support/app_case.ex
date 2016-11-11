@@ -8,17 +8,17 @@ defmodule Roger.AppCase do
       @app "test"
 
       require Logger
-      alias Roger.{Application, Queue, Job}
+      alias Roger.{Partition, Queue, Job}
 
       setup do
 
         Process.register(self(), :testcase)
-        {:ok, _pid} = Application.start(@app, default: 10)
+        {:ok, _pid} = Partition.start(@app, default: 10)
 
-        Elixir.Application.put_env(:roger, Roger.Application.Worker, callbacks: (unquote(opts)[:callbacks] || nil))
+        Application.put_env(:roger, Roger.Partition.Worker, callbacks: (unquote(opts)[:callbacks] || nil))
 
         on_exit fn ->
-          Elixir.Application.put_env(:roger, Roger.Application.Worker, [])
+          Application.put_env(:roger, Roger.Partition.Worker, [])
         end
 
         :ok

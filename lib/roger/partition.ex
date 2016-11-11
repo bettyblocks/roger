@@ -1,19 +1,19 @@
-defmodule Roger.Application do
+defmodule Roger.Partition do
   @moduledoc """
-  Per-node registry of all Roger applications that are started.
+  Per-node registry of all Roger partitions that are started.
 
   Roger implements multi-tenancy by dividing all its work between
-  different "Applications". (this name might be confusing - an OTP
-  application is something different!)
+  different "Partitions". (this name might be confusing - an OTP
+  partition is something different!)
 
-  Each application is identified by a unique ID. Applications have a
+  Each partition is identified by a unique ID. Partitions have a
   list of queues, which are defined by its type (an atom) and a
   max_workers value which sets the concurrency level.
 
   """
 
   use GenServer
-  alias Roger.{Application.Consumer, System, Application.Global}
+  alias Roger.{Partition.Consumer, System, Partition.Global}
 
   require Logger
 
@@ -25,10 +25,10 @@ defmodule Roger.Application do
   end
 
   @doc """
-  Start a Roger application
+  Start a Roger partition
 
-  Given a unique ID and a list of queues, starts the application
-  supervision structure. When the application has already been
+  Given a unique ID and a list of queues, starts the partition
+  supervision structure. When the partition has already been
   started, this calls `reconfigure/2` instead.
   """
   @spec start(id :: String.t, queues :: [queue_def]) :: {:ok, pid}
@@ -37,7 +37,7 @@ defmodule Roger.Application do
   end
 
   @doc """
-  Stop the given Roger application
+  Stop the given Roger partition
   """
   @spec stop(id :: String.t) :: :ok | {:error, :not_running}
   def stop(id) do
@@ -45,9 +45,9 @@ defmodule Roger.Application do
   end
 
   @doc """
-  Reconfigure the given Roger application
+  Reconfigure the given Roger partition
 
-  Use this function to adjust the queues for the application. The
+  Use this function to adjust the queues for the partition. The
   queues argument is *complete*: any queues that are not mentioned,
   are stopped and messages in them will no longer be processed on this
   node.
@@ -71,16 +71,16 @@ defmodule Roger.Application do
   end
 
   def handle_call({:start, id, queues}, _from, state) do
-    {reply, state} = start_application(id, queues, state)
+    {reply, state} = start_partition(id, queues, state)
     {:reply, reply, state}
   end
 
-  def handle_call({:stop, application}, _from, state) do
-    {reply, state} = stop_application(application, state)
+  def handle_call({:stop, partition}, _from, state) do
+    {reply, state} = stop_partition(partition, state)
     {:reply, reply, state}
   end
 
-  def handle_call(:waiting_applications, _from, state) do
+  def handle_call(:waiting_partitions, _from, state) do
     {:reply, state.waiting, state}
   end
 
@@ -94,7 +94,7 @@ defmodule Roger.Application do
   def handle_info(:check, state) do
     Process.send_after(self(), :check, 1000)
     if System.connected? and Enum.count(state.waiting) > 0 do
-      # try to connect some applications
+      # try to connect some partitions
       {_pids, apps} = Enum.unzip(state.waiting)
       {:noreply, start_all(apps, Map.put(state, :waiting, %{}))}
     else
@@ -114,26 +114,26 @@ defmodule Roger.Application do
     end
   end
 
-  defp start_all(applications, state) do
-    applications
+  defp start_all(partitions, state) do
+    partitions
     |> Enum.reduce(state, fn({id, queues}, state) ->
-      {_reply, state} = start_application(id, queues, state)
+      {_reply, state} = start_partition(id, queues, state)
       state
     end)
   end
 
-  defp start_application(id, queues, state) when is_atom(id) do
-    start_application(Atom.to_string(id), queues, state)
+  defp start_partition(id, queues, state) when is_atom(id) do
+    start_partition(Atom.to_string(id), queues, state)
   end
 
-  defp start_application(id, queues, state) do
+  defp start_partition(id, queues, state) do
     if System.connected? do
       # make sure a statemanager instance is running
       Singleton.start_child(Global, [id], {:app_global, id})
-      # start application supervision tree
-      pid = case Roger.ApplicationSupervisor.start_child(id) do
+      # start partition supervision tree
+      pid = case Roger.PartitionSupervisor.start_child(id) do
               {:ok, pid} ->
-                Logger.debug "Started Roger application: #{id}"
+                Logger.debug "Started Roger partition: #{id}"
                 pid
               {:error, {:already_started, pid}} ->
                 pid
@@ -146,10 +146,10 @@ defmodule Roger.Application do
     end
   end
 
-  defp stop_application(id, state) do
+  defp stop_partition(id, state) do
     case Roger.GProc.whereis({:app_supervisor, id}) do
       pid when is_pid(pid) ->
-        :ok = Roger.ApplicationSupervisor.stop_child(pid)
+        :ok = Roger.PartitionSupervisor.stop_child(pid)
         {:ok, %State{state | monitored: Map.delete(state.monitored, pid)}}
       :nil ->
         {{:error, :not_running}, state}
@@ -157,7 +157,7 @@ defmodule Roger.Application do
   end
 
   defp get_predefined_apps() do
-    :application.get_env(:roger, :applications, [])
+    :application.get_env(:roger, :partitions, [])
   end
 
 end

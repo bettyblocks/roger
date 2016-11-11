@@ -4,5 +4,5 @@ config :roger, Roger.AMQPClient,
   host: "localhost",
   port: 5672
 
-config :roger, :applications,
+config :roger, :partitions,
   example: [default: 10, other: 2]

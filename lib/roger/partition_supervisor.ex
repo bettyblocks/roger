@@ -1,6 +1,6 @@
-defmodule Roger.ApplicationSupervisor do
+defmodule Roger.PartitionSupervisor do
   @moduledoc """
-  The supervisor for all applications.
+  The supervisor for all partitions.
   """
 
   use Supervisor
@@ -11,13 +11,13 @@ defmodule Roger.ApplicationSupervisor do
 
   def init([]) do
     children = [
-      supervisor(Roger.Application.ContainingSupervisor, [], restart: :transient)
+      supervisor(Roger.Partition.ContainingSupervisor, [], restart: :transient)
     ]
     supervise(children, strategy: :simple_one_for_one)
   end
 
-  def start_child(application) do
-    Supervisor.start_child(__MODULE__, [application])
+  def start_child(partition) do
+    Supervisor.start_child(__MODULE__, [partition])
   end
 
   def stop_child(pid) do

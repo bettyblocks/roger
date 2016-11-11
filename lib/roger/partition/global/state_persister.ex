@@ -1,8 +1,8 @@
-defmodule Roger.Application.Global.StatePersister do
+defmodule Roger.Partition.Global.StatePersister do
   @moduledoc """
-  Behaviour for the persistence of the global application state.
+  Behaviour for the persistence of the global partition state.
 
-  See `Roger.Application.Global` on how to implement a custom persister module.
+  See `Roger.Partition.Global` on how to implement a custom persister module.
   """
 
 

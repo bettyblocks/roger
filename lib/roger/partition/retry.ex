@@ -1,4 +1,4 @@
-defmodule Roger.Application.Retry do
+defmodule Roger.Partition.Retry do
   @moduledoc """
   Implements the retry logic for jobs.
 
@@ -9,7 +9,7 @@ defmodule Roger.Application.Retry do
 
   To override these levels, set the following configuration:
 
-      config :roger, Roger.Application.Retry,
+      config :roger, Roger.Partition.Retry,
         levels: [1, 10, 60]
 
   This sets 3 retry levels, the first time is a job retried after 1
@@ -38,22 +38,22 @@ defmodule Roger.Application.Retry do
   end
 
   @doc """
-  Given an AMQP channel and the application, queues the given job for retry.
+  Given an AMQP channel and the partition, queues the given job for retry.
   """
-  def retry(channel, application, job) do
+  def retry(channel, partition, job) do
 
-    {queue, expiration} = setup_retry_queue(channel, application, job)
+    {queue, expiration} = setup_retry_queue(channel, partition, job)
 
     payload = Job.encode(%Job{job | retry_count: job.retry_count + 1})
     opts_extra = case expiration do
                    :buried -> []
                    _ -> [expiration: Integer.to_string(expiration)]
                  end
-    AMQP.Basic.publish(channel, "", queue, payload, Job.publish_opts(job, application) ++ opts_extra)
+    AMQP.Basic.publish(channel, "", queue, payload, Job.publish_opts(job, partition) ++ opts_extra)
     {:ok, expiration}
   end
 
-  defp setup_retry_queue(channel, application, job) do
+  defp setup_retry_queue(channel, partition, job) do
     queue_type = Job.queue_type(job)
 
     expiration = if job.retry_count < Enum.count(@levels) do
@@ -64,12 +64,12 @@ defmodule Roger.Application.Retry do
 
     arguments = [
       {"x-dead-letter-exchange", ""},
-      {"x-dead-letter-routing-key", Queue.make_name(application, queue_type)}
+      {"x-dead-letter-routing-key", Queue.make_name(partition, queue_type)}
     ]
     {queue_name, arguments} = if expiration == :buried do
-      {Queue.make_name(application, queue_type, ".buried"), arguments}
+      {Queue.make_name(partition, queue_type, ".buried"), arguments}
     else
-      {Queue.make_name(application, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration + 2000}]}
+      {Queue.make_name(partition, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration + 2000}]}
     end
 
     {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, durable: true, arguments: arguments)

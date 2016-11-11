@@ -1,9 +1,9 @@
-defmodule Roger.Application.Consumer.RetryTest do
+defmodule Roger.Partition.Consumer.RetryTest do
   use ExUnit.Case
-  use Roger.AppCase, callbacks: Roger.Application.Consumer.RetryTest.Callbacks
+  use Roger.AppCase, callbacks: Roger.Partition.Consumer.RetryTest.Callbacks
 
   defmodule Callbacks do
-    use Roger.Application.Worker.Callback
+    use Roger.Partition.Worker.Callback
 
     def on_error(_app, job, {:error, %RuntimeError{message: "fail!"}}, _state) do
       send(:testcase, {:retry, job.retry_count})

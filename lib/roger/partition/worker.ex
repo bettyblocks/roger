@@ -1,4 +1,4 @@
-defmodule Roger.Application.Worker do
+defmodule Roger.Partition.Worker do
   @moduledoc """
 
   Handles the decoding and execution of a single job.
@@ -19,16 +19,16 @@ defmodule Roger.Application.Worker do
 
   require Logger
 
-  alias Roger.{Job, GProc, Queue, Application.Retry}
-  alias Roger.Application.Global
+  alias Roger.{Job, GProc, Queue, Partition.Retry}
+  alias Roger.Partition.Global
 
   # after how long the wait queue for execution_key-type jobs expires
   @execution_waiting_expiry 1800 * 1000
 
   use GenServer
 
-  def start_link(application_id, channel, payload, meta) do
-    GenServer.start_link(__MODULE__, [application_id, channel, payload, meta])
+  def start_link(partition_id, channel, payload, meta) do
+    GenServer.start_link(__MODULE__, [partition_id, channel, payload, meta])
   end
 
   def name(job_id) do
@@ -39,12 +39,12 @@ defmodule Roger.Application.Worker do
 
   defmodule State do
     @moduledoc false
-    defstruct application_id: nil, meta: nil, raw_payload: nil, channel: nil
+    defstruct partition_id: nil, meta: nil, raw_payload: nil, channel: nil
   end
 
-  def init([application_id, channel, payload, meta]) do
+  def init([partition_id, channel, payload, meta]) do
     state = %State{
-      application_id: application_id,
+      partition_id: partition_id,
       channel: channel,
       meta: meta,
       raw_payload: payload}
@@ -55,31 +55,31 @@ defmodule Roger.Application.Worker do
     case Job.decode(state.raw_payload) do
       {:ok, job} ->
         job = %Job{job | started_at: Roger.now}
-        if Global.cancelled?(state.application_id, job.id, :remove) do
-          callback(:on_cancel, [state.application_id, job])
+        if Global.cancelled?(state.partition_id, job.id, :remove) do
+          callback(:on_cancel, [state.partition_id, job])
           job_done(job, :ack, state)
         else
 
-          if job.execution_key != nil and Global.executing?(state.application_id, job.execution_key, :add) do
+          if job.execution_key != nil and Global.executing?(state.partition_id, job.execution_key, :add) do
             # put job in the waiting queue,
             :ok = put_execution_waiting(job, state)
             # then ack it.
             AMQP.Basic.ack(state.channel, state.meta.delivery_tag)
           else
             GProc.regp(name(job.id))
-            GProc.regp({:roger_job_worker_meta, state.application_id, job.id}, job)
+            GProc.regp({:roger_job_worker_meta, state.partition_id, job.id}, job)
 
-            before_run_state = callback(:before_run, [state.application_id, job])
+            before_run_state = callback(:before_run, [state.partition_id, job])
             try do
               result = Job.execute(job)
               job_done(job, :ack, state)
 
-              callback(:after_run, [state.application_id, job, result, before_run_state])
+              callback(:after_run, [state.partition_id, job, result, before_run_state])
             catch
               t, e ->
                 #Logger.error "Execution error: #{t}:#{inspect e}"
               cb = if Job.retryable?(job) do
-                case Retry.retry(state.channel, state.application_id, job) do
+                case Retry.retry(state.channel, state.partition_id, job) do
                   {:ok, :buried} -> :on_buried
                   {:ok, _expiration} -> :on_error
                 end
@@ -88,10 +88,10 @@ defmodule Roger.Application.Worker do
               end
 
               job_done(job, :ack, state)
-              callback(cb, [state.application_id, job, {t, e}, before_run_state])
+              callback(cb, [state.partition_id, job, {t, e}, before_run_state])
 
               GProc.unregp(name(job.id))
-              GProc.unregp({:roger_job_worker_meta, state.application_id, job.id})
+              GProc.unregp({:roger_job_worker_meta, state.partition_id, job.id})
 
             end
           end
@@ -109,12 +109,12 @@ defmodule Roger.Application.Worker do
 
     if job != nil do
       if job.queue_key != nil do
-        :ok = Global.remove_queued(state.application_id, job.queue_key)
+        :ok = Global.remove_queued(state.partition_id, job.queue_key)
       end
 
       if job.execution_key != nil do
         # mark as "free"
-        :ok = Global.remove_executed(state.application_id, job.execution_key)
+        :ok = Global.remove_executed(state.partition_id, job.execution_key)
         # check if there are any messages in the waiting queue
         check_execution_waiting(job, state)
       end
@@ -142,7 +142,7 @@ defmodule Roger.Application.Worker do
 
   # Put in the waiting queue
   defp put_execution_waiting(job, state) do
-    Job.enqueue(job, state.application_id, execution_waiting_queue(job, state, :unprefixed))
+    Job.enqueue(job, state.partition_id, execution_waiting_queue(job, state, :unprefixed))
   end
 
   # Get the next message from the job's execution waiting queue, and
@@ -153,7 +153,7 @@ defmodule Roger.Application.Worker do
       {:ok, payload, meta} ->
         # enqueue the job again
         {:ok, job} = Job.decode(payload)
-        :ok = Job.enqueue(job, state.application_id)
+        :ok = Job.enqueue(job, state.partition_id)
         # ack it to have it removed from waiting queue
         :ok = AMQP.Basic.ack(state.channel, meta.delivery_tag)
       {:empty, _} ->
@@ -164,10 +164,10 @@ defmodule Roger.Application.Worker do
 
   # Return the name of the execution waiting queue. The queue gets
   # declared on the AMQP side as well. Returns the queue either
-  # prefixed with the application or unprefixed.
+  # prefixed with the partition or unprefixed.
   defp execution_waiting_queue(job, state, return \\ :prefixed) do
     bare_name = "execution-waiting-#{job.execution_key}"
-    name = Queue.make_name(state.application_id, bare_name)
+    name = Queue.make_name(state.partition_id, bare_name)
     {:ok, _} = AMQP.Queue.declare(state.channel, name, durable: true, arguments: [{"x-expires", @execution_waiting_expiry}])
     case return do
       :prefixed -> name

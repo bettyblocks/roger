@@ -1,6 +1,6 @@
 defmodule Roger.Info do
   @moduledoc """
-  Get information about the current applications, queues and jobs of the entire cluster.
+  Get information about the current partitions, queues and jobs of the entire cluster.
 
   This mirrors most functions from `Roger.NodeInfo` but calls these
   function for each node through `Roger.System.call/2`.
@@ -10,24 +10,24 @@ defmodule Roger.Info do
   alias Roger.System
 
   @doc """
-  Retrieve combined application info on all running and waiting applications, over the entire cluster.
+  Retrieve combined partition info on all running and waiting partitions, over the entire cluster.
   """
-  def applications do
-    gather(:applications)
+  def partitions do
+    gather(:partitions)
   end
 
   @doc """
-  Retrieve all applications that are currently started on all nodes in the cluster.
+  Retrieve all partitions that are currently started on all nodes in the cluster.
   """
-  def running_applications do
-    gather(:running_applications)
+  def running_partitions do
+    gather(:running_partitions)
   end
 
   @doc """
-  Retrieve all applications that are currently waiting for start.
+  Retrieve all partitions that are currently waiting for start.
   """
-  def waiting_applications do
-    gather(:waiting_applications)
+  def waiting_partitions do
+    gather(:waiting_partitions)
   end
 
   @doc """
@@ -38,7 +38,7 @@ defmodule Roger.Info do
   end
 
   @doc """
-  Retrieve all running jobs for the given application on the cluster.
+  Retrieve all running jobs for the given partition on the cluster.
   """
   def running_jobs(app_id) do
     gather(:running_jobs, [app_id])
