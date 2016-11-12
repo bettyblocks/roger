@@ -3,7 +3,7 @@ defmodule Roger.Mixfile do
 
   def project do
     [app: :roger,
-     version: "0.1.0",
+     version: "1.0.0beta1",
      elixir: "~> 1.3",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
@@ -21,7 +21,7 @@ defmodule Roger.Mixfile do
   defp elixirc_paths(_),     do: ["lib", "test/support", "integration_test"]
 
   defp description do
-    "Multi-tenant, high performance job processing system using RabbitMQ"
+    "RabbitMQ-backed background job processing system"
   end
 
   defp package do
