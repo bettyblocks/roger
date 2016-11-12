@@ -32,7 +32,7 @@ common options are:
 Roger can be configured with a callback module which invoke functions
 on various places in a job's life cycle.
 
-    config :roger, Roger.Application.Worker,
+    config :roger, Roger.Partition.Worker,
       callbacks: MyWorkerModule
 
 In this scenario, `MyWorkerModule` needs to *use* `Roger.Worker.Callback`:
@@ -49,7 +49,7 @@ In this worker module, you can implement the functions `before_run/2`,
 `after_run/4`, `on_error/4`, `on_cancel/2` and `on_buried/4` to
 respond to job events.
 
-See `Roger.Application.Worker.Callback` for the full documentation on
+See `Roger.Partition.Worker.Callback` for the full documentation on
 these functions.
 
 
@@ -57,18 +57,18 @@ these functions.
 State persistence callbacks
 ---------------------------
 
-Each Roger application has one global process running in the cluster,
+Each Roger partition has one global process running in the cluster,
 which holds some information necessary to implement certain features
-(see Roger.Application.Global for details).
+(see `Roger.Partition.Global` for details).
 
-It provides hooks to persist the information between application /
+It provides hooks to persist the information between partition /
 node restarts. By default, the global state is loaded from and written
 to the filesystem, but it is possible to override the persister, like
 this:
 
-    config :roger, Roger.Application.Global,
+    config :roger, Roger.Partition.Global,
       persister: Your.PersisterModule
 
 The persister module must implement the
-`Roger.Application.Global.StatePersister` behaviour, which provides
+`Roger.Partition.Global.StatePersister` behaviour, which provides
 simple load and save functions.

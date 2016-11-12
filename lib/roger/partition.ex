@@ -1,14 +1,22 @@
 defmodule Roger.Partition do
   @moduledoc """
-  Per-node registry of all Roger partitions that are started.
+  Per-node partition registry
 
   Roger implements multi-tenancy by dividing all its work between
-  different "Partitions". (this name might be confusing - an OTP
-  partition is something different!)
+  different "Partitions". Each partition is identified by a unique
+  ID. Partitions consist of a list of queues, which are defined by its
+  type (an atom) and a max_workers value which sets the concurrency
+  level. The RabbitMQ queue name is constructed of the partition ID +
+  the queue type.
 
-  Each partition is identified by a unique ID. Partitions have a
-  list of queues, which are defined by its type (an atom) and a
-  max_workers value which sets the concurrency level.
+  To spread out the work, partitions can be started in the cluster on
+  multiple nodes. The partition's queue configuration can be different
+  between nodes - i.e. some node might be able to handle more
+  concurrency than others.
+
+  Within the cluster, there is one global process
+  (`Roger.Partition.Global`) which manages the partition's state. In
+  it, it manages job's uniqueness, states of paused queues, et cetera.
 
   """
 
