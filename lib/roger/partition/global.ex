@@ -178,12 +178,12 @@ defmodule Roger.Partition.Global do
   ## queue pause / resume
 
   def handle_call({:queue_pause, queue}, _from, state) do
-    System.cast(:queue_pause, queue: queue, app_id: state.partition_id)
+    System.cast(:queue_pause, queue: queue, partition_id: state.partition_id)
     {:reply, :ok, %{state | paused: MapSet.put(state.paused, queue), dirty: true}}
   end
 
   def handle_call({:queue_resume, queue}, _from, state) do
-    System.cast(:queue_resume, queue: queue, app_id: state.partition_id)
+    System.cast(:queue_resume, queue: queue, partition_id: state.partition_id)
     {:reply, :ok, %{state | paused: MapSet.delete(state.paused, queue), dirty: true}}
   end
 

@@ -49,8 +49,8 @@ defmodule Roger.NodeInfo do
   @doc """
   Retrieve all running jobs for the given partition on this node.
   """
-  def running_jobs(app_id) do
-    selector = {:roger_job_worker_meta, app_id, :_}
+  def running_jobs(partition_id) do
+    selector = {:roger_job_worker_meta, partition_id, :_}
     for {_pid, job} <- GProc.find_properties(selector) do
       job
     end
@@ -62,10 +62,10 @@ defmodule Roger.NodeInfo do
   This basically does a `basic.get` AMQP command on the queue and
   requeues the message using a nack.
   """
-  def queued_jobs(app_id, queue_type, count \\ 100) do
+  def queued_jobs(partition_id, queue_type, count \\ 100) do
     {:ok, channel} = AMQPClient.open_channel()
 
-    queue = Roger.Queue.make_name(app_id, queue_type)
+    queue = Roger.Queue.make_name(partition_id, queue_type)
     result = get_queue_messages(channel, queue, count)
 
     :ok = AMQP.Channel.close(channel)

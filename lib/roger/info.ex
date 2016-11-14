@@ -40,8 +40,8 @@ defmodule Roger.Info do
   @doc """
   Retrieve all running jobs for the given partition on the cluster.
   """
-  def running_jobs(app_id) do
-    gather(:running_jobs, [app_id])
+  def running_jobs(partition_id) do
+    gather(:running_jobs, [partition_id])
   end
 
   defp gather(call, args \\ []) do

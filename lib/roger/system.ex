@@ -180,12 +180,12 @@ defmodule Roger.System do
     :ok
   end
 
-  defp dispatch_command({:queue_pause, [queue: queue, app_id: app_id]}) do
-    Roger.Partition.Consumer.pause(app_id, queue)
+  defp dispatch_command({:queue_pause, [queue: queue, partition_id: partition_id]}) do
+    Roger.Partition.Consumer.pause(partition_id, queue)
   end
 
-  defp dispatch_command({:queue_resume, [queue: queue, app_id: app_id]}) do
-    Roger.Partition.Consumer.resume(app_id, queue)
+  defp dispatch_command({:queue_resume, [queue: queue, partition_id: partition_id]}) do
+    Roger.Partition.Consumer.resume(partition_id, queue)
   end
 
   defp dispatch_command({{:apply, mod, fun}, args}) do
