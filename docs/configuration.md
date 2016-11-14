@@ -41,7 +41,7 @@ In this scenario, `MyWorkerModule` needs to *use* `Roger.Worker.Callback`:
       use Roger.Worker.Callback
 
       def after_run(_app_id, job, result, _state) do
-        IO.puts("Job #{job.id} succeeded with: #{inspect result}"
+        IO.puts("Job #{job.id} succeeded with: #{inspect result}")
       end
     end
 
