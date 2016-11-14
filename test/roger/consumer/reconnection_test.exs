@@ -9,7 +9,7 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
 
     def perform(_n) do
       :timer.sleep 100
-      send(:testcase, :reconnect_job_done)
+      send(Roger.Partition.Consumer.ReconnectionTest, :reconnect_job_done)
     end
 
   end
@@ -17,7 +17,7 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
   @app "test"
 
   setup do
-    Process.register(self(), :testcase)
+    Process.register(self(), Roger.Partition.Consumer.ReconnectionTest)
     {:ok, _pid} = Roger.Partition.start(@app, [default: 10])
 
     on_exit fn ->

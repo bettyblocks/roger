@@ -37,7 +37,7 @@ defmodule Roger.Partition.ConsumerTest do
     use Job
 
     def perform(queue) do
-      send(:testcase, {:done, queue})
+      send(Roger.Partition.ConsumerTest, {:done, queue})
     end
   end
 

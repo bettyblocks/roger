@@ -6,7 +6,7 @@ defmodule Roger.Partition.Consumer.RetryTest do
     use Roger.Partition.Worker.Callback
 
     def on_error(_app, job, {:error, %RuntimeError{message: "fail!"}}, _state) do
-      send(:testcase, {:retry, job.retry_count})
+      send(Roger.Partition.Consumer.RetryTest, {:retry, job.retry_count})
     end
 
   end

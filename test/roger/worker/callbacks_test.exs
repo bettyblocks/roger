@@ -19,7 +19,7 @@ defmodule Roger.Worker.CallbacksTest do
     use Roger.Partition.Worker.Callback
 
     def before_run(_app, _job) do
-      send(:testcase, :before_run_ok)
+      send(Roger.Worker.CallbacksTest, :before_run_ok)
     end
   end
 
@@ -40,7 +40,7 @@ defmodule Roger.Worker.CallbacksTest do
     use Roger.Partition.Worker.Callback
 
     def after_run(_app, _job, _result, _state) do
-      send(:testcase, :after_run_ok)
+      send(Roger.Worker.CallbacksTest, :after_run_ok)
     end
   end
 
@@ -69,7 +69,7 @@ defmodule Roger.Worker.CallbacksTest do
 
     def after_run(_app, _job, result, state) do
       ^result = nil # assertion
-      send(:testcase, {:after_run_ok, state})
+      send(Roger.Worker.CallbacksTest, {:after_run_ok, state})
     end
   end
 
@@ -97,7 +97,7 @@ defmodule Roger.Worker.CallbacksTest do
 
     def on_error(_app, _job, error, _state) do
       {:error, %RuntimeError{}} = error
-      send(:testcase, :on_error_ok)
+      send(Roger.Worker.CallbacksTest, :on_error_ok)
     end
   end
 

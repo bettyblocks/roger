@@ -9,7 +9,7 @@ defmodule Roger.Job.EnqueueTest do
     use Roger.Job
 
     def perform([num]) do
-      send(:testcase, num * num)
+      send(Roger.Job.EnqueueTest, num * num)
     end
 
   end

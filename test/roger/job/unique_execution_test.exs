@@ -5,9 +5,9 @@ defmodule Roger.Job.UniqueExecutionTest do
     use Roger.Job
 
     def perform(msg) do
-      send(:testcase, {:start, msg})
+      send(Roger.Job.UniqueExecutionTest, {:start, msg})
       :timer.sleep 100
-      send(:testcase, {:stop, msg})
+      send(Roger.Job.UniqueExecutionTest, {:stop, msg})
       :timer.sleep 100
     end
 
@@ -37,7 +37,7 @@ defmodule Roger.Job.UniqueExecutionTest do
     use AMQP
     on_exit fn -> Queue.purge(channel, "test-execution-waiting-a") end
 
-    Process.register(self(), :testcase)
+    Process.register(self(), Roger.Job.UniqueExecutionTest)
     {:ok, _pid} = Roger.Partition.start(@app, [default: 10])
 
     {:ok, job} = Roger.Job.create(MyJob, 1)

@@ -7,7 +7,7 @@ defmodule Roger.WorkerTest do
   @app "test"
 
   setup do
-    Process.register(self(), :testcase)
+    Process.register(self(), Roger.WorkerTest)
     {:ok, _pid} = Partition.start(@app, [default: 10])
     :ok
   end
@@ -17,7 +17,7 @@ defmodule Roger.WorkerTest do
     use Roger.Job
 
     def perform([]) do
-      send(:testcase, :job_ok)
+      send(Roger.WorkerTest, :job_ok)
     end
 
   end

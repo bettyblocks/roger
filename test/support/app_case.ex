@@ -12,7 +12,7 @@ defmodule Roger.AppCase do
 
       setup do
 
-        Process.register(self(), :testcase)
+        Process.register(self(), unquote(__CALLER__.module))
         {:ok, _pid} = Partition.start(@app, default: 10)
 
         Application.put_env(:roger, Roger.Partition.Worker, callbacks: (unquote(opts)[:callbacks] || nil))

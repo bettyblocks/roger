@@ -10,7 +10,7 @@ defmodule Roger.Partition.NodeInfoTest do
 
     def perform(queue) do
       :timer.sleep 200
-      send(:testcase, {:done, queue})
+      send(Roger.Partition.NodeInfoTest, {:done, queue})
     end
   end
 

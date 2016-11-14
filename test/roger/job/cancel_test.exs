@@ -10,7 +10,7 @@ defmodule Roger.Job.CancelTest do
     use Roger.Partition.Worker.Callback
 
     def on_cancel(_app, job) do
-      send(:testcase, {:cancel, job.id})
+      send(Roger.Job.CancelTest, {:cancel, job.id})
     end
 
   end
@@ -57,7 +57,7 @@ defmodule Roger.Job.CancelTest do
     use Roger.Job
 
     def perform(_) do
-      send(:testcase, :job_running)
+      send(Roger.Job.CancelTest, :job_running)
       :timer.sleep(200)
     end
   end

@@ -11,7 +11,7 @@ defmodule Roger.Job.UniqueQueueTest do
 
     def perform([msg]) do
       :timer.sleep(50)
-      send(:testcase, msg)
+      send(Roger.Job.UniqueQueueTest, msg)
     end
   end
 
