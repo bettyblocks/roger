@@ -17,12 +17,15 @@ defmodule Roger.Job.UniqueExecutionTest do
 
   end
 
-  defp receive_list(list) do
+  defp receive_list([]), do: :ok
+  defp receive_list([msg | rest]) do
     receive do
-      msg ->
-        receive_list([msg | list])
+      ^msg ->
+        receive_list(rest)
+      _other ->
+        receive_list([msg | rest])
     after 1000 ->
-        Enum.reverse(list)
+        :error
     end
   end
 
@@ -47,9 +50,7 @@ defmodule Roger.Job.UniqueExecutionTest do
     :ok = Roger.Job.enqueue(job, @app)
     :timer.sleep 1
 
-    received = receive_list([])
-
-    assert received == [start: 1, stop: 1, start: 2, stop: 2, start: 3, stop: 3]
+    assert :ok == receive_list([start: 1, stop: 1, start: 2, stop: 2, start: 3, stop: 3])
 
   end
 
