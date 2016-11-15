@@ -88,7 +88,6 @@ defmodule Roger.Partition.NodeInfoTest do
     assert partition[:default][:paused] == false
 
     :ok = Roger.Partition.reconfigure("idle", default: 1)
-    :timer.sleep 10
 
     info = NodeInfo.running_partitions
 
