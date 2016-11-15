@@ -58,7 +58,7 @@ defmodule Roger.Partition.NodeInfoTest do
 
     info = NodeInfo.running_partitions
 
-    assert partition = info["test"]
+    partition = info["test"]
     assert partition[:default][:consumer_count] == 0 # we're paused
     assert partition[:default][:max_workers] == 10
     assert partition[:default][:message_count] > 0
@@ -67,6 +67,43 @@ defmodule Roger.Partition.NodeInfoTest do
     :ok = Consumer.resume(@app, :default)
     assert_receive {:done, 4}, 500
   end
+
+  test "queue info for consumer without workers" do
+
+    {:ok, _pid} = Roger.Partition.start("idle", default: 0)
+
+    {:ok, job} = Job.create(SlowTestJob, 5)
+    :ok = Job.enqueue(job, "idle")
+    {:ok, job} = Job.create(SlowTestJob, 5)
+    :ok = Job.enqueue(job, "idle")
+
+    :timer.sleep 10
+
+    info = NodeInfo.running_partitions
+
+    partition = info["idle"]
+    assert partition[:default][:consumer_count] == 0 # we're not consuming this queue
+    assert partition[:default][:max_workers] == 0
+    assert partition[:default][:message_count] > 0
+    assert partition[:default][:paused] == false
+
+    :ok = Roger.Partition.reconfigure("idle", default: 1)
+    :timer.sleep 10
+
+    info = NodeInfo.running_partitions
+
+    partition = info["idle"]
+    assert partition[:default][:consumer_count] == 1 # we're consuming
+    assert partition[:default][:max_workers] == 1
+    assert partition[:default][:message_count] > 0
+    assert partition[:default][:paused] == false
+
+    for _ <- 1..2 do
+      assert_receive {:done, 5}, 500
+    end
+
+  end
+
 
   test "retrieve queued jobs" do
     :ok = Consumer.pause(@app, :default)

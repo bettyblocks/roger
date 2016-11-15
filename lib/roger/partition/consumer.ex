@@ -160,13 +160,29 @@ defmodule Roger.Partition.Consumer do
     |> Enum.into(%{})
 
     # reconfigure channels that have changed
-    existing_queues = MapSet.intersection(new_queue_types, existing_queue_types)
+    {existing_queues, pausing} = MapSet.intersection(new_queue_types, existing_queue_types)
     |> pick.(state.queues)
-    |> Enum.map(fn(q) ->
-      # currently, max_workers is the only channel property that can change
+    |> Enum.reduce({[], state.pausing}, fn(q, {existing, pausing}) ->
       new_q = Enum.find(new_queues, &(&1.type == q.type))
-      :ok = AMQP.Basic.qos(q.channel, prefetch_count: new_q.max_workers)
-      %{q | max_workers: new_q.max_workers}
+      # currently, max_workers is the only channel property that can
+      # change. When it changes to 0 we need to stop consuming.
+      cond do
+        new_q.max_workers == q.max_workers ->
+          # nothing changed
+          {[q | existing], pausing}
+        new_q.max_workers > 0 ->
+          # new max_workers
+          q = %{q | max_workers: new_q.max_workers}
+          if q.consumer_tag != nil do
+            {:ok, _} = AMQP.Basic.cancel(q.channel, q.consumer_tag)
+          end
+          :ok = AMQP.Basic.qos(q.channel, prefetch_count: q.max_workers)
+          {[consume(q, state) | existing], pausing}
+        new_q.max_workers == 0 ->
+          # max_workers changed to 0
+          {:ok, _} = AMQP.Basic.cancel(q.channel, q.consumer_tag)
+          {existing, Map.put(pausing, q.consumer_tag, q.channel)}
+      end
     end)
 
     # open channels of queues that are in new queues but not in partition queues
@@ -174,8 +190,8 @@ defmodule Roger.Partition.Consumer do
     |> pick.(new_queues)
     |> Enum.map(fn(q) ->
       {:ok, channel} = Roger.AMQPClient.open_channel()
-      :ok = AMQP.Basic.qos(channel, prefetch_count: q.max_workers)
-      if !MapSet.member?(state.paused, q.type) do
+      if !MapSet.member?(state.paused, q.type) and q.max_workers > 0 do
+        :ok = AMQP.Basic.qos(channel, prefetch_count: q.max_workers)
         consume(%Queue{q | channel: channel}, state)
       else
         %Queue{q | channel: channel}
@@ -184,7 +200,7 @@ defmodule Roger.Partition.Consumer do
 
     queues = (existing_queues ++ new_queues) |> Enum.sort(&(&1.type < &2.type))
 
-    %State{state | queues: queues, closing: closing}
+    %State{state | queues: queues, closing: closing, pausing: pausing}
   end
 
   defp find_queue_by_tag(consumer_tag, state) do
