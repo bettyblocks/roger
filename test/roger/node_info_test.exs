@@ -49,7 +49,26 @@ defmodule Roger.Partition.NodeInfoTest do
     assert [] == NodeInfo.running_jobs("test")
   end
 
-  test "get queued jobs" do
+  test "queue info" do
+    :ok = Consumer.pause(@app, :default)
+
+    {:ok, job} = Job.create(SlowTestJob, 4)
+    :ok = Job.enqueue(job, "test")
+    :timer.sleep 10
+
+    info = NodeInfo.running_partitions
+
+    assert partition = info["test"]
+    assert partition[:default][:consumer_count] == 0 # we're paused
+    assert partition[:default][:max_workers] == 10
+    assert partition[:default][:message_count] > 0
+    assert partition[:default][:paused] == true
+
+    :ok = Consumer.resume(@app, :default)
+    assert_receive {:done, 4}, 500
+  end
+
+  test "retrieve queued jobs" do
     :ok = Consumer.pause(@app, :default)
 
     apps = NodeInfo.running_partitions
