@@ -23,15 +23,11 @@ defmodule Roger.AMQPClient do
   def open_channel() do
     case GenServer.call(__MODULE__, :open_channel) do
       {:ok, channel} ->
-        if !test?, do: Process.link(channel.pid)
         {:ok, channel}
       {:error, _} = e ->
         e
     end
   end
-
-  @env Mix.env
-  defp test?, do: @env == :test
 
   @doc """
   Publishes a message to RabbitMQ.

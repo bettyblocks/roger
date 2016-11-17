@@ -22,16 +22,25 @@ defmodule Roger.PartitionTest do
     :ok = PartitionSupervisor.stop_child(pid)
     :timer.sleep 50
 
-
     assert !has_test_app(NodeInfo.running_partitions)
     assert has_test_app(NodeInfo.waiting_partitions)
 
-    :timer.sleep 1000
+    :timer.sleep 4000
     # it restarts
 
     assert has_test_app(NodeInfo.running_partitions)
     assert !has_test_app(NodeInfo.waiting_partitions)
 
+    :ok = Partition.stop("test")
+  end
+
+  test "test start / stop / start" do
+    queues = [{:default,20},{:expression,0},{:fast,20}]
+    {:ok, _} = Partition.start("ssss", queues)
+    Partition.stop("ssss")
+    {:ok, _} = Partition.start("ssss", queues)
+
+    :ok = Partition.stop("ssss")
   end
 
   defp has_test_app(apps) do

@@ -5,6 +5,10 @@ defmodule Roger.Partition.NodeInfoTest do
   alias Roger.NodeInfo
   alias Roger.Partition.Consumer
 
+  setup do
+    :timer.sleep 1000
+  end
+
   defmodule SlowTestJob do
     use Job
 
@@ -28,7 +32,7 @@ defmodule Roger.Partition.NodeInfoTest do
     :timer.sleep 10
 
     info = NodeInfo.running_jobs
-    assert info["test"] == NodeInfo.running_jobs("test")
+    # assert info["test"] == NodeInfo.running_jobs("test")
 
     assert is_map(info)
     assert is_list(info["test"])
@@ -68,40 +72,40 @@ defmodule Roger.Partition.NodeInfoTest do
     assert_receive {:done, 4}, 500
   end
 
-  # test "queue info for consumer without workers" do
+  test "queue info for consumer without workers" do
 
-  #   {:ok, _pid} = Roger.Partition.start("idle", default: 0)
+    {:ok, _pid} = Roger.Partition.start("idle", default: 0)
 
-  #   {:ok, job} = Job.create(SlowTestJob, 5)
-  #   :ok = Job.enqueue(job, "idle")
-  #   {:ok, job} = Job.create(SlowTestJob, 5)
-  #   :ok = Job.enqueue(job, "idle")
+    {:ok, job} = Job.create(SlowTestJob, 5)
+    :ok = Job.enqueue(job, "idle")
+    {:ok, job} = Job.create(SlowTestJob, 5)
+    :ok = Job.enqueue(job, "idle")
 
-  #   :timer.sleep 100
+    :timer.sleep 100
 
-  #   info = NodeInfo.running_partitions
+    info = NodeInfo.running_partitions
 
-  #   partition = info["idle"]
-  #   assert partition[:default][:consumer_count] == 0 # we're not consuming this queue
-  #   assert partition[:default][:max_workers] == 0
-  #   assert partition[:default][:message_count] > 0
-  #   assert partition[:default][:paused] == false
+    partition = info["idle"]
+    assert partition[:default][:consumer_count] == 0 # we're not consuming this queue
+    assert partition[:default][:max_workers] == 0
+    assert partition[:default][:message_count] > 0
+    assert partition[:default][:paused] == false
 
-  #   :ok = Roger.Partition.reconfigure("idle", default: 1)
+    :ok = Roger.Partition.reconfigure("idle", default: 1)
 
-  #   info = NodeInfo.running_partitions
+    info = NodeInfo.running_partitions
 
-  #   partition = info["idle"]
-  #   assert partition[:default][:consumer_count] == 1 # we're consuming
-  #   assert partition[:default][:max_workers] == 1
-  #   assert partition[:default][:message_count] > 0
-  #   assert partition[:default][:paused] == false
+    partition = info["idle"]
+    assert partition[:default][:consumer_count] == 1 # we're consuming
+    assert partition[:default][:max_workers] == 1
+    assert partition[:default][:message_count] > 0
+    assert partition[:default][:paused] == false
 
-  #   for _ <- 1..2 do
-  #     assert_receive {:done, 5}, 500
-  #   end
+    for _ <- 1..2 do
+      assert_receive {:done, 5}, 500
+    end
 
-  # end
+  end
 
 
   test "retrieve queued jobs" do

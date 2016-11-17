@@ -18,6 +18,7 @@ defmodule Roger.AppCase do
         Application.put_env(:roger, Roger.Partition.Worker, callbacks: (unquote(opts)[:callbacks] || nil))
 
         on_exit fn ->
+          Partition.stop(@app)
           Application.put_env(:roger, Roger.Partition.Worker, [])
         end
 

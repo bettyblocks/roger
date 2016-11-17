@@ -145,9 +145,15 @@ defmodule Roger.System do
     {:noreply, state |> State.check_node_reply(meta.correlation_id, from_node, reply)}
   end
 
+  def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
+    Process.send_after(self(), :timeout, 1000) # try again if the AMQP client is back up
+    {:noreply, %State{state | channel: nil}}
+  end
+
   def handle_info(:timeout, state) do
     case Roger.AMQPClient.open_channel do
       {:ok, channel} ->
+        Process.monitor(channel.pid)
 
         # Fanout / pubsub setup
         :ok = Exchange.declare(channel, @system_exchange, :fanout)

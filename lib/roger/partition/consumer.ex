@@ -134,7 +134,12 @@ defmodule Roger.Partition.Consumer do
     end
   end
 
-
+  def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
+    # Shut down the partition when a channel closes unexpectedly
+    Logger.debug "Terminating partition #{state.partition_id} due to connection error"
+    :ok = Roger.Partition.ContainingSupervisor.stop(state.partition_id)
+    {:stop, :normal, state}
+  end
 
   ## Internal functions
 
@@ -190,6 +195,7 @@ defmodule Roger.Partition.Consumer do
     |> pick.(new_queues)
     |> Enum.map(fn(q) ->
       {:ok, channel} = Roger.AMQPClient.open_channel()
+      Process.monitor(channel.pid)
       if !MapSet.member?(state.paused, q.type) and q.max_workers > 0 do
         :ok = AMQP.Basic.qos(channel, prefetch_count: q.max_workers)
         consume(%Queue{q | channel: channel}, state)

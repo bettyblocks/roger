@@ -36,7 +36,7 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
 
     restart_amqp_connection()
 
-    assert_receive :reconnect_job_done, 200
+    assert_receive :reconnect_job_done, 10000
 
   end
 
@@ -52,7 +52,6 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
   defp restart_amqp_connection do
     pid = GenServer.call(Roger.AMQPClient, :get_connection_pid)
     Process.exit(pid, :kill)
-    :timer.sleep 1500
   end
 
 end

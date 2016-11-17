@@ -11,6 +11,10 @@ defmodule Roger.Partition.ContainingSupervisor do
     Supervisor.start_link(__MODULE__, [partition], name: GProc.via(name(partition)))
   end
 
+  def stop(partition) do
+    Roger.PartitionSupervisor.stop_child(GProc.whereis(name(partition)))
+  end
+
   defp name(id) do
     {:app_supervisor, id}
   end
