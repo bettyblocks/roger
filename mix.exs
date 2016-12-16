@@ -42,7 +42,7 @@ defmodule Roger.Mixfile do
   defp deps do
     [
       {:amqp, "~> 0.1.5"},
-      {:amqp_client, github: "jbrisbin/amqp_client", tag: "rabbitmq-3.6.2", override: true},
+      {:amqp_client, "~> 3.6.7-pre.1", override: true},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6.1"},
       {:poison, "~> 2.1"},
