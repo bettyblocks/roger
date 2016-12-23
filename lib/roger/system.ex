@@ -204,7 +204,7 @@ defmodule Roger.System do
   end
 
   defp generate_id do
-    :crypto.rand_bytes(10) |> Base.hex_encode32(case: :lower)
+    :crypto.strong_rand_bytes(10) |> Base.hex_encode32(case: :lower)
   end
 
 end

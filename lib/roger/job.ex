@@ -127,7 +127,7 @@ defmodule Roger.Job do
   end
 
   defp generate_job_id do
-    :crypto.rand_bytes(20) |> Base.hex_encode32(case: :lower)
+    :crypto.strong_rand_bytes(20) |> Base.hex_encode32(case: :lower)
   end
 
   @doc """
