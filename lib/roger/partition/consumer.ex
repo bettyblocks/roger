@@ -238,7 +238,7 @@ defmodule Roger.Partition.Consumer do
     if MapSet.member?(state.paused, type) do
       queue = find_queue_by_type(type, state)
       queues = Enum.map(state.queues, fn(q) ->
-        if q.type == queue.type do
+        if queue != nil && q.type == queue.type do
           consume(q, state)
         else
           q
