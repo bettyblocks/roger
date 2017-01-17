@@ -31,12 +31,6 @@ defmodule Roger.Partition.Retry do
   @default_levels [1, 3, 5, 10, 20, 35, 60, 100, 200, 400, 1000, 1800]
   @levels Application.get_env(:roger, __MODULE__, [])[:levels] || @default_levels
 
-  if Mix.env == :test do
-    @one_second 1
-  else
-    @one_second 1000
-  end
-
   @doc """
   Given an AMQP channel and the partition, queues the given job for retry.
   """

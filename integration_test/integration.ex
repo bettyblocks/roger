@@ -21,7 +21,7 @@ defmodule Roger.Integration do
     wait_ready(@slave_nodes)
 
     for _ <- 1..@job_count do
-      enqueue
+      enqueue()
     end
 
     :timer.sleep 1000
@@ -108,7 +108,7 @@ defmodule Roger.Integration do
 
 
   def enqueue_many(n \\ 300_000) do
-    for _ <- 1..n, do: enqueue
+    for _ <- 1..n, do: enqueue()
   end
 
   def enqueue do
