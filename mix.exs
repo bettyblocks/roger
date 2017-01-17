@@ -44,6 +44,7 @@ defmodule Roger.Mixfile do
       {:amqp, "~> 0.1.5"},
       {:amqp_client, "~> 3.6.7-pre.1", override: true},
       {:rabbit_common, github: "arjan/rabbitmq-common", override: true},
+      {:jsx, "~> 2.8"},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6.1"},
       {:poison, "~> 2.1"},
