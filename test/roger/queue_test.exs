@@ -1,4 +1,4 @@
-defmodule Roger.Partition.InfoTest do
+defmodule Roger.Partition.QueueTest do
   use ExUnit.Case
   use Roger.AppCase
 
