@@ -1,9 +1,9 @@
 defmodule Roger.NodeInfo do
   @moduledoc """
-  Get information about the current partitions, queues and jobs of this node.
+  Get information about the current partitions, queues and jobs on this node.
   """
 
-  alias Roger.{Partition, Partition.Consumer, GProc, AMQPClient, Job}
+  alias Roger.{Partition, Partition.Consumer, GProc}
 
   @doc """
   Retrieve combined partition info on all running and waiting partitions, on this node.
@@ -53,39 +53,6 @@ defmodule Roger.NodeInfo do
     selector = {:roger_job_worker_meta, partition_id, :_}
     for {_pid, job} <- GProc.find_properties(selector) do
       job
-    end
-  end
-
-  @doc """
-  Retrieve queued jobs for the given partition.
-
-  This basically does a `basic.get` AMQP command on the queue and
-  requeues the message using a nack.
-  """
-  def queued_jobs(partition_id, queue_type, count \\ 100) do
-    {:ok, channel} = AMQPClient.open_channel()
-
-    queue = Roger.Queue.make_name(partition_id, queue_type)
-    result = get_queue_messages(channel, queue, count)
-
-    :ok = AMQP.Channel.close(channel)
-    result
-  end
-
-  defp get_queue_messages(channel, queue, count) do
-    get_queue_messages(channel, queue, count, [])
-  end
-
-  defp get_queue_messages(_, _, 0, result) do
-    result
-  end
-  defp get_queue_messages(channel, queue, count, acc) do
-    case AMQP.Basic.get(channel, queue, no_ack: false) do
-      {:ok, payload, _meta} ->
-        {:ok, job} = Job.decode(payload)
-        get_queue_messages(channel, queue, count - 1, [job | acc])
-      {:empty, _} ->
-        acc
     end
   end
 
