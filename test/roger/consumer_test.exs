@@ -110,7 +110,7 @@ defmodule Roger.Partition.ConsumerTest do
     {:ok, job} = Job.create(TestJob, :job_4)
     Job.enqueue(job, @app)
 
-    pid = Roger.GProc.whereis({:app_job_consumer, "test"})
+    pid = Roger.GProc.whereis({:app_job_consumer, @app})
     Process.exit(pid, :normal)
 
     refute_receive {:done, :job_4}, 200

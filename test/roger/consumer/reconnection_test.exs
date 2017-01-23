@@ -1,5 +1,6 @@
 defmodule Roger.Partition.Consumer.ReconnectionTest do
   use ExUnit.Case
+  use Roger.AppCase
 
   alias Roger.Job
 
@@ -14,20 +15,6 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
 
   end
 
-  @app "test"
-
-  setup do
-    Process.register(self(), Roger.Partition.Consumer.ReconnectionTest)
-    {:ok, _pid} = Roger.Partition.start(@app, [default: 10])
-
-    on_exit fn ->
-      :ok = Application.stop :roger
-      :ok = Application.start :roger
-      :timer.sleep 200
-    end
-
-    :ok
-  end
 
   test "reconnect after enqueue job" do
     {:ok, job} = Job.create(MyJob, 1)
