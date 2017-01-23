@@ -99,6 +99,11 @@ defmodule Roger.Partition.Consumer do
     {:noreply, Map.put(state, :queues, queues)}
   end
 
+  def handle_info({:basic_cancel, %{consumer_tag: consumer_tag}}, state) do
+    # FIXME handle a cancel? (server-initiated close, e.g. when a queue gets deleted)
+    {:noreply, state}
+  end
+
   def handle_info({:basic_cancel_ok, %{consumer_tag: consumer_tag}}, state) do
     if Map.has_key?(state.closing, consumer_tag) do
       :ok = AMQP.Channel.close(state.closing[consumer_tag])

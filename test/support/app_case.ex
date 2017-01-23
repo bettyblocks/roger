@@ -7,7 +7,7 @@ defmodule Roger.AppCase do
     queues = opts[:queues] || [default: 10]
     quote do
 
-      @app "test#{unquote(:erlang.monotonic_time)}"
+      @app "test"
 
       require Logger
       alias Roger.{Partition, Queue, Job}
@@ -19,8 +19,29 @@ defmodule Roger.AppCase do
         Application.put_env(:roger, Roger.Partition.Worker, callbacks: (unquote(opts)[:callbacks] || nil))
 
         on_exit fn ->
-          :ok = Roger.Partition.stop(@app)
-          Application.put_env(:roger, Roger.Partition.Worker, [])
+
+          partition_info =
+            try do
+              Roger.NodeInfo.running_partitions
+            catch
+              :exit, {:noproc, _} ->
+                %{}
+            end
+
+          Roger.Partition.stop(@app)
+
+          # Clean up all queues
+          {:ok, channel} = Roger.AMQPClient.open_channel
+          for {id, queues} <- partition_info, {q, _} <- queues do
+            queue = Roger.Queue.make_name(id, q)
+            {:ok, _} = AMQP.Queue.delete(channel, queue)
+          end
+          AMQP.Channel.close(channel)
+
+          # Remove all roger env. variables except AMQP connection info
+          for {key, _} <- Application.get_all_env(:roger), key != Roger.AMQPClient do
+            Application.delete_env(:roger, key)
+          end
         end
 
         :ok
