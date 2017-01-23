@@ -1,15 +1,17 @@
 defmodule Roger.PartitionTest do
   use ExUnit.Case
 
+  @app "test#{:erlang.monotonic_time}"
+
   alias Roger.{NodeInfo, Partition, PartitionSupervisor}
 
   test "start and stop partition" do
 
-    {:ok, _pid} = Partition.start("test", [default: 10])
+    {:ok, _pid} = Partition.start(@app, [default: 10])
 
     assert has_test_app(NodeInfo.running_partitions)
 
-    :ok = Partition.stop("test")
+    :ok = Partition.stop(@app)
     :timer.sleep 50
 
     assert !has_test_app(NodeInfo.running_partitions)
@@ -17,10 +19,10 @@ defmodule Roger.PartitionTest do
 
   test "automatic restart after supervisor stop" do
 
-    {:ok, pid} = Partition.start("test", [default: 10])
+    {:ok, pid} = Partition.start(@app, [default: 10])
 
     :ok = PartitionSupervisor.stop_child(pid)
-    :timer.sleep 50
+    :timer.sleep 5
 
     assert !has_test_app(NodeInfo.running_partitions)
     assert has_test_app(NodeInfo.waiting_partitions)
@@ -31,20 +33,22 @@ defmodule Roger.PartitionTest do
     assert has_test_app(NodeInfo.running_partitions)
     assert !has_test_app(NodeInfo.waiting_partitions)
 
-    :ok = Partition.stop("test")
+    :ok = Partition.stop(@app)
   end
+
+  @app2 "test#{:erlang.monotonic_time}"
 
   test "test start / stop / start" do
     queues = [{:default,20},{:expression,0},{:fast,20}]
-    {:ok, _} = Partition.start("ssss", queues)
-    Partition.stop("ssss")
-    {:ok, _} = Partition.start("ssss", queues)
+    {:ok, _} = Partition.start(@app2, queues)
+    Partition.stop(@app2)
+    {:ok, _} = Partition.start(@app2, queues)
 
-    :ok = Partition.stop("ssss")
+    :ok = Partition.stop(@app2)
   end
 
   defp has_test_app(apps) do
-    apps["test"] != nil
+    apps[@app] != nil
   end
 
 end

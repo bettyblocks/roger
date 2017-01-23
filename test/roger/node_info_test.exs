@@ -28,15 +28,15 @@ defmodule Roger.Partition.NodeInfoTest do
     :ok = Consumer.resume(@app, :default)
 
     {:ok, job} = Job.create(SlowTestJob, 1)
-    :ok = Job.enqueue(job, "test")
+    :ok = Job.enqueue(job, @app)
     :timer.sleep 10
 
     info = NodeInfo.running_jobs
-    # assert info["test"] == NodeInfo.running_jobs("test")
+    # assert info[@app] == NodeInfo.running_jobs(@app)
 
     assert is_map(info)
-    assert is_list(info["test"])
-    jobs = info["test"]
+    assert is_list(info[@app])
+    jobs = info[@app]
 
     assert 1 == Enum.count(jobs)
     job = jobs |> hd
@@ -49,20 +49,20 @@ defmodule Roger.Partition.NodeInfoTest do
     assert_receive {:done, 1}, 500
     :timer.sleep 10
 
-    assert [] == NodeInfo.running_jobs()["test"]
-    assert [] == NodeInfo.running_jobs("test")
+    assert [] == NodeInfo.running_jobs()[@app]
+    assert [] == NodeInfo.running_jobs(@app)
   end
 
   test "queue info" do
     :ok = Consumer.pause(@app, :default)
 
     {:ok, job} = Job.create(SlowTestJob, 4)
-    :ok = Job.enqueue(job, "test")
+    :ok = Job.enqueue(job, @app)
     :timer.sleep 10
 
     info = NodeInfo.running_partitions
 
-    partition = info["test"]
+    partition = info[@app]
     assert partition[:default][:consumer_count] == 0 # we're paused
     assert partition[:default][:max_workers] == 10
     assert partition[:default][:message_count] > 0

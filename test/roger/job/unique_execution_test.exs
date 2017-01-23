@@ -1,5 +1,6 @@
 defmodule Roger.Job.UniqueExecutionTest do
   use ExUnit.Case
+  use Roger.AppCase
 
   defmodule MyJob do
     use Roger.Job
@@ -29,16 +30,15 @@ defmodule Roger.Job.UniqueExecutionTest do
     end
   end
 
-  @app "test"
 
   test "jobs with execution key get executed sequentially" do
 
-    {:ok, channel} = Roger.AMQPClient.open_channel
-    use AMQP
-    on_exit fn -> Queue.purge(channel, "test-execution-waiting-a") end
+    # {:ok, channel} = Roger.AMQPClient.open_channel
+    # use AMQP
+    # on_exit fn -> Queue.purge(channel, "test-execution-waiting-a") end
 
-    Process.register(self(), Roger.Job.UniqueExecutionTest)
-    {:ok, _pid} = Roger.Partition.start(@app, [default: 10])
+    # Process.register(self(), Roger.Job.UniqueExecutionTest)
+    # {:ok, _pid} = Roger.Partition.start(@app, [default: 10])
 
     {:ok, job} = Roger.Job.create(MyJob, 1)
     :ok = Roger.Job.enqueue(job, @app)

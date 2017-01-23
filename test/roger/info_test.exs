@@ -30,10 +30,10 @@ defmodule Roger.Partition.InfoTest do
     assert NodeInfo.running_partitions[@app].default.paused
 
     {:ok, job} = Job.create(SlowTestJob, 2)
-    :ok = Job.enqueue(job, "test")
+    :ok = Job.enqueue(job, @app)
 
     {:ok, job} = Job.create(SlowTestJob, 3)
-    :ok = Job.enqueue(job, "test")
+    :ok = Job.enqueue(job, @app)
     :timer.sleep 10
 
     q = NodeInfo.running_partitions[@app].default
@@ -41,7 +41,7 @@ defmodule Roger.Partition.InfoTest do
     assert q.message_count == 2
     assert q.consumer_count == 0
 
-    jobs = Info.queued_jobs("test", :default)
+    jobs = Info.queued_jobs(@app, :default)
     assert [a, b] = jobs
     assert a.args == 3
     assert b.args == 2

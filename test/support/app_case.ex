@@ -3,9 +3,11 @@ defmodule Roger.AppCase do
   use ExUnit.CaseTemplate
 
   using(opts) do
+
+    queues = opts[:queues] || [default: 10]
     quote do
 
-      @app "test"
+      @app "test#{unquote(:erlang.monotonic_time)}"
 
       require Logger
       alias Roger.{Partition, Queue, Job}
@@ -13,7 +15,7 @@ defmodule Roger.AppCase do
       setup do
 
         Process.register(self(), unquote(__CALLER__.module))
-        {:ok, _pid} = Partition.start(@app, default: 10)
+        {:ok, _pid} = Partition.start(@app, unquote(queues))
 
         Application.put_env(:roger, Roger.Partition.Worker, callbacks: (unquote(opts)[:callbacks] || nil))
 

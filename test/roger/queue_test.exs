@@ -5,7 +5,6 @@ defmodule Roger.Partition.QueueTest do
   alias Roger.{Info, NodeInfo, Queue}
   alias Roger.Partition.Consumer
 
-
   defmodule TestJob do
     use Job
 
@@ -20,18 +19,18 @@ defmodule Roger.Partition.QueueTest do
     :ok = Consumer.pause(@app, :default)
 
     {:ok, job} = Job.create(TestJob, 2)
-    :ok = Job.enqueue(job, "test")
+    :ok = Job.enqueue(job, @app)
 
     {:ok, job} = Job.create(TestJob, 3)
-    :ok = Job.enqueue(job, "test")
+    :ok = Job.enqueue(job, @app)
     :timer.sleep 10
 
     # assert 2 == NodeInfo.running_partitions[@app].default.message_count
 
-    jobs = Info.queued_jobs("test", :default)
+    jobs = Info.queued_jobs(@app, :default)
     assert [_, _] = jobs
 
-    {:ok, %{message_count: 2}} = Queue.purge("test", :default)
+    {:ok, %{message_count: 2}} = Queue.purge(@app, :default)
 
     assert 0 == NodeInfo.running_partitions[@app].default.message_count
 
