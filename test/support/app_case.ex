@@ -24,7 +24,7 @@ defmodule Roger.AppCase do
             try do
               Roger.NodeInfo.running_partitions
             catch
-              :exit, {:noproc, _} ->
+              _, _ ->
                 %{}
             end
 
