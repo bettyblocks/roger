@@ -157,6 +157,7 @@ defmodule Roger.Partition do
   defp stop_partition(id, state) do
     case Roger.GProc.whereis({:app_supervisor, id}) do
       pid when is_pid(pid) ->
+        :ok = Singleton.stop_child(Global, [id])
         :ok = Roger.PartitionSupervisor.stop_child(pid)
         {:ok, %State{state | monitored: Map.delete(state.monitored, pid)}}
       :nil ->
