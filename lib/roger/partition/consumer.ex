@@ -99,7 +99,7 @@ defmodule Roger.Partition.Consumer do
     {:noreply, Map.put(state, :queues, queues)}
   end
 
-  def handle_info({:basic_cancel, %{consumer_tag: consumer_tag}}, state) do
+  def handle_info({:basic_cancel, %{consumer_tag: _consumer_tag}}, state) do
     # FIXME handle a cancel? (server-initiated close, e.g. when a queue gets deleted)
     {:noreply, state}
   end

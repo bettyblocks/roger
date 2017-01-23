@@ -18,6 +18,7 @@ defmodule Roger.Job.UniqueQueueTest do
   test "job gets refused when queued twice" do
 
     {:ok, job} = Job.create(MyJob, ["job1"])
+
     :ok = Job.enqueue(job, @app)
     {:error, :duplicate} = Job.enqueue(job, @app)
     assert_receive "job1"
