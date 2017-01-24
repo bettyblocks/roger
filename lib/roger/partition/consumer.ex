@@ -53,7 +53,7 @@ defmodule Roger.Partition.Consumer do
   end
 
   def init([partition_id]) do
-    paused = Global.queue_get_paused(partition_id)
+    {:ok, paused} = Global.queue_get_paused(partition_id)
     {:ok, %State{partition_id: partition_id, paused: paused}}
   end
 

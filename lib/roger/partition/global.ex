@@ -35,6 +35,7 @@ defmodule Roger.Partition.Global do
   """
 
   use GenServer
+  use Roger.Partition.Global.AliveCheck
 
   require Logger
   alias Roger.{KeySet, System}
@@ -52,6 +53,7 @@ defmodule Roger.Partition.Global do
   When a job is currently executing, the process of a running job will
   be killed.
   """
+  @decorate alive_check()
   @spec cancel_job(partition_id :: String.t, job_id :: String.t) :: :ok
   def cancel_job(partition_id, job_id) do
     GenServer.call(global_name(partition_id), {:cancel, job_id})
@@ -60,6 +62,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given job id has been marked cancelled
   """
+  @decorate alive_check()
   @spec cancelled?(partition_id :: String.t, job_id :: String.t) :: boolean
   @spec cancelled?(partition_id :: String.t, job_id :: String.t, remove :: :remove) :: boolean
   def cancelled?(partition_id, job_id, remove \\ nil) do
@@ -69,6 +72,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given queue key has been marked enqueued
   """
+  @decorate alive_check()
   @spec queued?(partition_id :: String.t, queue_key :: String.t) :: boolean
   @spec queued?(partition_id :: String.t, queue_key :: String.t, add :: :add) :: boolean
   def queued?(partition_id, queue_key, add \\ nil) do
@@ -78,6 +82,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Remove a given queue key
   """
+  @decorate alive_check()
   @spec remove_queued(partition_id :: String.t, queue_key :: String.t) :: :ok
   def remove_queued(partition_id, queue_key) do
     GenServer.call(global_name(partition_id), {:remove_queued, queue_key})
@@ -86,6 +91,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given execution key has been set
   """
+  @decorate alive_check()
   @spec executing?(partition_id :: String.t, execution_key :: String.t) :: boolean
   @spec executing?(partition_id :: String.t, execution_key :: String.t, add :: :add) :: boolean
   def executing?(partition_id, execution_key, add \\ nil) do
@@ -95,6 +101,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Remove the given execution key
   """
+  @decorate alive_check()
   @spec remove_executed(partition_id :: String.t, execution_key :: String.t) :: :ok
   def remove_executed(partition_id, execution_key) do
     GenServer.call(global_name(partition_id), {:remove_executed, execution_key})
@@ -103,6 +110,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Cluster-wide pausing of the given queue in the given partition_id.
   """
+  @decorate alive_check()
   @spec queue_pause(partition_id :: String.t, queue :: any) :: :ok
   def queue_pause(partition_id, queue) do
     GenServer.call(global_name(partition_id), {:queue_pause, queue})
@@ -111,6 +119,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Cluster-wide pausing of the given queue in the given partition_id.
   """
+  @decorate alive_check()
   @spec queue_resume(partition_id :: String.t, queue :: any) :: :ok
   def queue_resume(partition_id, queue) do
     GenServer.call(global_name(partition_id), {:queue_resume, queue})
@@ -119,7 +128,8 @@ defmodule Roger.Partition.Global do
   @doc """
   Get the set of paused queues for the given partition_id.
   """
-  @spec queue_get_paused(partition_id :: String.t) :: MapSet.t
+  @decorate alive_check()
+  @spec queue_get_paused(partition_id :: String.t) :: {:ok, MapSet.t}
   def queue_get_paused(partition_id) do
     GenServer.call(global_name(partition_id), :queue_get_paused)
   end

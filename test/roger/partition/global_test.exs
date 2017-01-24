@@ -6,18 +6,22 @@ defmodule Roger.Partition.GlobalTest do
   alias Roger.Partition.Global
 
   test "pause and unpause queues" do
-
-    assert MapSet.new([]) == Global.queue_get_paused(@app)
+    assert {:ok, %MapSet{}} == Global.queue_get_paused(@app)
 
     :ok = Global.queue_pause(@app, :default)
     :ok = Global.queue_pause(@app, :fast)
     :ok = Global.queue_pause(@app, :expression)
 
-    Enum.each Global.queue_get_paused(@app), fn(q) ->
+    {:ok, queues} = Global.queue_get_paused(@app)
+    Enum.each queues, fn(q) ->
       :ok = Global.queue_resume(@app, q)
     end
 
-    assert MapSet.new([]) == Global.queue_get_paused(@app)
+    assert {:ok, %MapSet{}} == Global.queue_get_paused(@app)
+  end
+
+  test "(not) alive check" do
+    assert {:error, :not_started} == Global.queue_get_paused("foo")
   end
 
 end
