@@ -35,7 +35,6 @@ defmodule Roger.Partition.Global do
   """
 
   use GenServer
-  use Roger.Partition.Global.AliveCheck
 
   require Logger
   alias Roger.{KeySet, System}
@@ -53,92 +52,100 @@ defmodule Roger.Partition.Global do
   When a job is currently executing, the process of a running job will
   be killed.
   """
-  @decorate alive_check()
   @spec cancel_job(partition_id :: String.t, job_id :: String.t) :: :ok
   def cancel_job(partition_id, job_id) do
-    GenServer.call(global_name(partition_id), {:cancel, job_id})
+    partition_call(partition_id, {:cancel, job_id})
   end
 
   @doc """
   Check whether a given job id has been marked cancelled
   """
-  @decorate alive_check()
   @spec cancelled?(partition_id :: String.t, job_id :: String.t) :: boolean
   @spec cancelled?(partition_id :: String.t, job_id :: String.t, remove :: :remove) :: boolean
   def cancelled?(partition_id, job_id, remove \\ nil) do
-    GenServer.call(global_name(partition_id), {:is_cancelled, job_id, remove})
+    partition_call(partition_id, {:is_cancelled, job_id, remove})
   end
 
   @doc """
   Check whether a given queue key has been marked enqueued
   """
-  @decorate alive_check()
   @spec queued?(partition_id :: String.t, queue_key :: String.t) :: boolean
   @spec queued?(partition_id :: String.t, queue_key :: String.t, add :: :add) :: boolean
   def queued?(partition_id, queue_key, add \\ nil) do
-    GenServer.call(global_name(partition_id), {:is_queued, queue_key, add})
+    partition_call(partition_id, {:is_queued, queue_key, add})
   end
 
   @doc """
   Remove a given queue key
   """
-  @decorate alive_check()
   @spec remove_queued(partition_id :: String.t, queue_key :: String.t) :: :ok
   def remove_queued(partition_id, queue_key) do
-    GenServer.call(global_name(partition_id), {:remove_queued, queue_key})
+    partition_call(partition_id, {:remove_queued, queue_key})
   end
 
   @doc """
   Check whether a given execution key has been set
   """
-  @decorate alive_check()
   @spec executing?(partition_id :: String.t, execution_key :: String.t) :: boolean
   @spec executing?(partition_id :: String.t, execution_key :: String.t, add :: :add) :: boolean
   def executing?(partition_id, execution_key, add \\ nil) do
-    GenServer.call(global_name(partition_id), {:is_executing, execution_key, add})
+    partition_call(partition_id, {:is_executing, execution_key, add})
   end
 
   @doc """
   Remove the given execution key
   """
-  @decorate alive_check()
   @spec remove_executed(partition_id :: String.t, execution_key :: String.t) :: :ok
   def remove_executed(partition_id, execution_key) do
-    GenServer.call(global_name(partition_id), {:remove_executed, execution_key})
+    partition_call(partition_id, {:remove_executed, execution_key})
   end
 
   @doc """
   Cluster-wide pausing of the given queue in the given partition_id.
   """
-  @decorate alive_check()
   @spec queue_pause(partition_id :: String.t, queue :: any) :: :ok
   def queue_pause(partition_id, queue) do
-    GenServer.call(global_name(partition_id), {:queue_pause, queue})
+    partition_call(partition_id, {:queue_pause, queue})
   end
 
   @doc """
   Cluster-wide pausing of the given queue in the given partition_id.
   """
-  @decorate alive_check()
   @spec queue_resume(partition_id :: String.t, queue :: any) :: :ok
   def queue_resume(partition_id, queue) do
-    GenServer.call(global_name(partition_id), {:queue_resume, queue})
+    partition_call(partition_id, {:queue_resume, queue})
   end
 
   @doc """
   Get the set of paused queues for the given partition_id.
   """
-  @decorate alive_check()
   @spec queue_get_paused(partition_id :: String.t) :: {:ok, MapSet.t}
   def queue_get_paused(partition_id) do
-    GenServer.call(global_name(partition_id), :queue_get_paused)
+    partition_call(partition_id, :queue_get_paused)
+  end
+
+  @doc false
+  @spec partition_call(partition_id :: String.t, request :: any) :: any
+  defp partition_call(partition_id, request) do
+    name = global_name(partition_id)
+    pid = GenServer.whereis(name)
+
+    case is_pid(pid) and Process.alive?(pid) do
+      true ->
+        case GenServer.call(name, request) do
+          :ok -> :ok
+          true -> true
+          false -> false
+          result -> {:ok, result}
+        end
+      false -> {:error, :not_started}
+    end
   end
 
   @doc false
   def global_name(id) when is_binary(id) do
     {:global, {:app_global, id}}
   end
-
 
   ## Server side
 

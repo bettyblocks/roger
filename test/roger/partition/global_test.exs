@@ -21,6 +21,7 @@ defmodule Roger.Partition.GlobalTest do
   end
 
   test "(not) alive check" do
+    assert {:error, :not_started} == Global.cancel_job("foo", "bar")
     assert {:error, :not_started} == Global.queue_get_paused("foo")
   end
 
