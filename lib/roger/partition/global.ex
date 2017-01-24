@@ -127,18 +127,16 @@ defmodule Roger.Partition.Global do
   @doc false
   @spec partition_call(partition_id :: String.t, request :: any) :: :ok | true | false | {:ok, any} | {:error, :not_started}
   defp partition_call(partition_id, request) do
-    name = global_name(partition_id)
-    pid = GenServer.whereis(name)
-
-    case is_pid(pid) and Process.alive?(pid) do
-      true ->
-        case GenServer.call(name, request) do
-          :ok -> :ok
-          true -> true
-          false -> false
-          result -> {:ok, result}
-        end
-      false -> {:error, :not_started}
+    try do
+      case GenServer.call(global_name(partition_id), request) do
+        :ok -> :ok
+        true -> true
+        false -> false
+        result -> {:ok, result}
+      end
+    catch
+      :exit, {:noproc, _} ->
+        {:error, :not_started}
     end
   end
 
