@@ -23,9 +23,10 @@ defmodule Roger.Partition.QueueTest do
 
     {:ok, job} = Job.create(TestJob, 3)
     :ok = Job.enqueue(job, @app)
+
     :timer.sleep 10
 
-    # assert 2 == NodeInfo.running_partitions[@app].default.message_count
+    assert 2 == NodeInfo.running_partitions[@app].default.message_count
 
     jobs = Info.queued_jobs(@app, :default)
     assert [_, _] = jobs
