@@ -125,7 +125,7 @@ defmodule Roger.Partition.Global do
   end
 
   @doc false
-  @spec partition_call(partition_id :: String.t, request :: any) :: any
+  @spec partition_call(partition_id :: String.t, request :: any) :: :ok | true | false | {:ok, any} | {:error, :not_started}
   defp partition_call(partition_id, request) do
     name = global_name(partition_id)
     pid = GenServer.whereis(name)
