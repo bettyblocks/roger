@@ -60,6 +60,8 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given job id has been marked cancelled
   """
+  @spec cancelled?(partition_id :: String.t, job_id :: String.t) :: boolean
+  @spec cancelled?(partition_id :: String.t, job_id :: String.t, remove :: :remove) :: boolean
   def cancelled?(partition_id, job_id, remove \\ nil) do
     GenServer.call(global_name(partition_id), {:is_cancelled, job_id, remove})
   end
@@ -67,6 +69,8 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given queue key has been marked enqueued
   """
+  @spec queued?(partition_id :: String.t, queue_key :: String.t) :: boolean
+  @spec queued?(partition_id :: String.t, queue_key :: String.t, add :: :add) :: boolean
   def queued?(partition_id, queue_key, add \\ nil) do
     GenServer.call(global_name(partition_id), {:is_queued, queue_key, add})
   end
@@ -74,6 +78,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Remove a given queue key
   """
+  @spec remove_queued(partition_id :: String.t, queue_key :: String.t) :: :ok
   def remove_queued(partition_id, queue_key) do
     GenServer.call(global_name(partition_id), {:remove_queued, queue_key})
   end
@@ -81,6 +86,8 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given execution key has been set
   """
+  @spec executing?(partition_id :: String.t, execution_key :: String.t) :: boolean
+  @spec executing?(partition_id :: String.t, execution_key :: String.t, add :: :add) :: boolean
   def executing?(partition_id, execution_key, add \\ nil) do
     GenServer.call(global_name(partition_id), {:is_executing, execution_key, add})
   end
@@ -88,6 +95,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Remove the given execution key
   """
+  @spec remove_executed(partition_id :: String.t, execution_key :: String.t) :: :ok
   def remove_executed(partition_id, execution_key) do
     GenServer.call(global_name(partition_id), {:remove_executed, execution_key})
   end
@@ -95,6 +103,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Cluster-wide pausing of the given queue in the given partition_id.
   """
+  @spec queue_pause(partition_id :: String.t, queue :: any) :: :ok
   def queue_pause(partition_id, queue) do
     GenServer.call(global_name(partition_id), {:queue_pause, queue})
   end
@@ -102,6 +111,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Cluster-wide pausing of the given queue in the given partition_id.
   """
+  @spec queue_resume(partition_id :: String.t, queue :: any) :: :ok
   def queue_resume(partition_id, queue) do
     GenServer.call(global_name(partition_id), {:queue_resume, queue})
   end
@@ -109,6 +119,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Get the set of paused queues for the given partition_id.
   """
+  @spec queue_get_paused(partition_id :: String.t) :: MapSet.t
   def queue_get_paused(partition_id) do
     GenServer.call(global_name(partition_id), :queue_get_paused)
   end
