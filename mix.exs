@@ -42,6 +42,7 @@ defmodule Roger.Mixfile do
   defp deps do
     [
       {:amqp, "~> 0.2.0-pre.2"},
+      {:rabbit_common, github: "arjan/rabbitmq-common", override: true},
       {:jsx, "~> 2.8"},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6.1"},
