@@ -3,7 +3,7 @@ defmodule Roger.Mixfile do
 
   def project do
     [app: :roger,
-     version: "1.0.0-beta8",
+     version: "1.0.0-beta9",
      elixir: "~> 1.3",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
@@ -41,9 +41,7 @@ defmodule Roger.Mixfile do
   # Dependencies
   defp deps do
     [
-      {:amqp, "~> 0.1.5"},
-      {:amqp_client, "~> 3.6.7-pre.1", override: true},
-      {:rabbit_common, github: "arjan/rabbitmq-common", override: true},
+      {:amqp, "~> 0.2.0-pre.2"},
       {:jsx, "~> 2.8"},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6.1"},
