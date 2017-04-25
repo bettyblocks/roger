@@ -46,7 +46,8 @@ defmodule Roger.Mixfile do
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6.1"},
       {:poison, "~> 2.1"},
-      {:ex_doc, "~> 0.12", only: :dev}
+      {:ex_doc, "~> 0.12", only: :dev},
+      {:inch_ex, only: :docs}
     ]
   end
 end

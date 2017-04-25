@@ -17,3 +17,4 @@ erl_crash.dump
 *.ez
 
 config/dev.exs
+/docs/all.json

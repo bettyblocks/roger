@@ -7,3 +7,6 @@ elixir:
 otp_release:
   - 19.0
 script: MIX_ENV=test mix compile --warnings-as-errors && MIX_ENV=test mix test && integration_test/run
+after_script:
+  - mix deps.get --only docs
+  - MIX_ENV=docs mix inch.report
