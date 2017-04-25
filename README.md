@@ -5,18 +5,17 @@
 Roger is a multi-tenant, high performance job processing system for Elixir.
 
 
-## Feature checklist
+## Features
 
-- [x] Multi-tentant architecture
-- [x] Based on Rabbitmq
-- [x] Per-queue concurrency control
-- [x] Jobs cancellation (both in the queue and while running)
-- [x] Option to enforce per-partition job uniqueness
-- [x] Option to enforce job uniqueness during execution
-- [x] Pausing / unpausing work queues
-- [x] All operations are cluster-aware
-- [x] Retry w/ exponential backoff
-- [x] Resilient against AMQP network conditions (reconnects, process crashes, etc)
-- [x] Partition state persistence between restarts (configurable)
-- [x] Detailed queue / partition information
-- [x] Documentation
+- Multi-tentant architecture, ("partitions")
+- Based on RabbitMQ
+- Per-queue concurrency control
+- Jobs cancellation (both queued and while running)
+- Option to enforce per-partition job uniqueness
+- Option to enforce job uniqueness during execution
+- Pausing / unpausing work queues
+- All operations are cluster-aware
+- Retry w/ exponential backoff
+- Resilient against AMQP network conditions (reconnects, process crashes, etc)
+- Partition state persistence between restarts (configurable)
+- Detailed queue / partition information
