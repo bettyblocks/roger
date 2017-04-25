@@ -5,5 +5,5 @@ services:
 elixir:
   - 1.4.2
 otp_release:
-  - 19
+  - 19.0
 script: MIX_ENV=test mix compile --warnings-as-errors && MIX_ENV=test mix test && integration_test/run
