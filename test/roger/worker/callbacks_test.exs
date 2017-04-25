@@ -95,7 +95,10 @@ defmodule Roger.Worker.CallbacksTest do
   defmodule OnErrorWorkerCallback do
     use Roger.Partition.Worker.Callback
 
-    def on_error(_app, _job, error, _state) do
+    def on_error(_app, _job, error, stacktrace, _state) do
+      true = is_list(stacktrace)
+      [{Roger.Worker.CallbacksTest.ErrorJob, :perform, 1, _} | _] = stacktrace
+
       {:error, %RuntimeError{}} = error
       send(Roger.Worker.CallbacksTest, :on_error_ok)
     end

@@ -88,7 +88,7 @@ defmodule Roger.Partition.Worker do
               end
 
               job_done(job, :ack, state)
-              callback(cb, [state.partition_id, job, {t, e}, before_run_state])
+              callback(cb, [state.partition_id, job, {t, e}, System.stacktrace(), before_run_state])
 
               GProc.unregp(name(job.id))
               GProc.unregp({:roger_job_worker_meta, state.partition_id, job.id})
