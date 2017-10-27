@@ -1,11 +1,11 @@
-%{"amqp": {:hex, :amqp, "0.2.1", "bba2084129de2bdd0189d6deae6fb1654500e4c9b8be9909bf1b07778d54a58a", [:mix], [{:amqp_client, "~> 3.6.8", [hex: :amqp_client, optional: false]}, {:rabbit_common, "~> 3.6.8", [hex: :rabbit_common, optional: false]}]},
-  "amqp_client": {:hex, :amqp_client, "3.6.9", "076d7c68abc670d1bb44bbc357e4fba991a3ab53ce6160ec43576c653849a643", [:make, :rebar3], [{:rabbit_common, "3.6.9", [hex: :rabbit_common, optional: false]}]},
+%{"amqp": {:hex, :amqp, "0.3.0", "45c26acbc63507e4bf7fe9b2e7e32733dcf478a1695439baedc4690722b652d1", [:mix], [{:amqp_client, "~> 3.6.8", [hex: :amqp_client, repo: "hexpm", optional: false]}, {:rabbit_common, "~> 3.6.8", [hex: :rabbit_common, repo: "hexpm", optional: false]}], "hexpm"},
+  "amqp_client": {:hex, :amqp_client, "3.6.12", "dfdfe7be661feb96ece404092a47431a73797ad412959732d940f96f80290da0", [:make, :rebar3], [{:rabbit_common, "3.6.12", [hex: :rabbit_common, repo: "hexpm", optional: false]}], "hexpm"},
   "decorator": {:hex, :decorator, "1.1.0", "3832dff8285a97f28e9c7923ef8d28c24495522ced97f9f1ba2e314fc8f65425", [:mix], []},
-  "earmark": {:hex, :earmark, "1.0.2", "a0b0904d74ecc14da8bd2e6e0248e1a409a2bc91aade75fcf428125603de3853", [:mix], []},
-  "ex_doc": {:hex, :ex_doc, "0.14.3", "e61cec6cf9731d7d23d254266ab06ac1decbb7651c3d1568402ec535d387b6f7", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
+  "earmark": {:hex, :earmark, "1.2.3", "206eb2e2ac1a794aa5256f3982de7a76bf4579ff91cb28d0e17ea2c9491e46a4", [:mix], [], "hexpm"},
+  "ex_doc": {:hex, :ex_doc, "0.18.1", "37c69d2ef62f24928c1f4fdc7c724ea04aecfdf500c4329185f8e3649c915baf", [:mix], [{:earmark, "~> 1.1", [hex: :earmark, repo: "hexpm", optional: false]}], "hexpm"},
   "gproc": {:hex, :gproc, "0.6.1", "4579663e5677970758a05d8f65d13c3e9814ec707ad51d8dcef7294eda1a730c", [:rebar3], []},
   "inch_ex": {:hex, :inch_ex, "0.5.6", "418357418a553baa6d04eccd1b44171936817db61f4c0840112b420b8e378e67", [:mix], [{:poison, "~> 1.5 or ~> 2.0 or ~> 3.0", [hex: :poison, optional: false]}]},
-  "jsx": {:hex, :jsx, "2.8.1", "1453b4eb3615acb3e2cd0a105d27e6761e2ed2e501ac0b390f5bbec497669846", [:mix, :rebar3], []},
+  "jsx": {:hex, :jsx, "2.8.3", "a05252d381885240744d955fbe3cf810504eb2567164824e19303ea59eef62cf", [:mix, :rebar3], [], "hexpm"},
   "poison": {:hex, :poison, "2.2.0", "4763b69a8a77bd77d26f477d196428b741261a761257ff1cf92753a0d4d24a63", [:mix], []},
-  "rabbit_common": {:hex, :rabbit_common, "3.6.9", "d54e1bc366f5f553a75055dfc6c93f0025efee0322f98bdf8597aff8482b996d", [:make, :rebar3], []},
-  "singleton": {:hex, :singleton, "1.1.1", "afeffb623b50297d5b4c03b989fcae61b4cad6feaf81ca957881849a8de47eb4", [:mix], []}}
+  "rabbit_common": {:hex, :rabbit_common, "3.6.12", "28dfb9ce4decf64caa9d9e70977ab57af983bc2795fd9db349bfc254a8b45235", [:make, :rebar3], [], "hexpm"},
+  "singleton": {:hex, :singleton, "1.2.0", "b65dcd745de10ab71d5cf149a8ddde496f33f2c401f4e0b4398dbab79a91be51", [:mix], [], "hexpm"}}
