@@ -3,7 +3,7 @@ defmodule Roger.Mixfile do
 
   def project do
     [app: :roger,
-     version: "1.1.0",
+     version: "1.2.0",
      elixir: "~> 1.3",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
@@ -27,7 +27,7 @@ defmodule Roger.Mixfile do
   defp package do
     %{files: ["lib", "mix.exs",
               "docs/*.md", "LICENSE"],
-      maintainers: ["Arjan Scherpenisse"],
+      maintainers: ["Arjan Scherpenisse", "Peter Arentsen"],
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/bettyblocks/roger"}}
   end
@@ -45,7 +45,7 @@ defmodule Roger.Mixfile do
       {:jsx, "~> 2.8"},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6.1"},
-      {:poison, "~> 2.1"},
+      {:poison, "~> 2.1 or ~> 3.0"},
       {:ex_doc, "~> 0.12", only: :dev},
       {:inch_ex, only: :docs}
     ]
