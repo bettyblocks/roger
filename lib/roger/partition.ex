@@ -92,22 +92,21 @@ defmodule Roger.Partition do
     {:reply, state.waiting, state}
   end
 
-  def handle_info(:timeout, state) do
-    Process.send_after(self(), :check, 1000)
-    apps = get_predefined_apps()
-    state = start_all(apps, state)
-    {:noreply, state}
-  end
-
-  def handle_info(:check, state) do
-    Process.send_after(self(), :check, 1000)
-    if System.connected? and Enum.count(state.waiting) > 0 do
+  def handle_cast(:check_partitions, state) do
+    if Enum.count(state.waiting) > 0 do
       # try to connect some partitions
       {_pids, apps} = Enum.unzip(state.waiting)
       {:noreply, start_all(apps, Map.put(state, :waiting, %{}))}
     else
       {:noreply, state}
     end
+  end
+
+  def handle_info(:timeout, state) do
+    Process.send_after(Process.whereis(Roger.System), :check_started_partitions, 1000)
+    apps = get_predefined_apps()
+    state = start_all(apps, state)
+    {:noreply, state}
   end
 
   def handle_info({:DOWN, _, :process, pid, _}, state) do

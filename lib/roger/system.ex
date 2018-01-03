@@ -120,6 +120,15 @@ defmodule Roger.System do
     {:noreply, state |> State.add_waiting_reply(id, from, nodes)}
   end
 
+  def handle_info(:check_started_partitions, state) do
+    Process.send_after(self(), :check_started_partitions, 1000)
+    if state.channel != nil do
+      pid = Process.whereis(Roger.Partition)
+      :ok = GenServer.cast(Roger.Partition, :check_partitions)
+    end
+    {:noreply, state}
+  end
+
   def handle_info({:basic_consume_ok, _meta}, state) do
     {:noreply, state}
   end
