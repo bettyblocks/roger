@@ -151,7 +151,7 @@ defmodule Roger.Partition.Global do
 
   def init([partition_id]) do
     Process.send_after(self(), :save, @save_interval)
-    :ok = @persister_module.init(partition_id)
+    :ok = apply(@persister_module, :init, [partition_id])
     {:ok, load(partition_id)}
   end
 
@@ -225,7 +225,7 @@ defmodule Roger.Partition.Global do
   end
 
   defp load(partition_id) do
-    case @persister_module.load(partition_id) do
+    case apply(@persister_module, :load, [partition_id]) do
       {:ok, data} ->
         state = State.deserialize(data)
         %State{state | partition_id: partition_id}
@@ -238,7 +238,7 @@ defmodule Roger.Partition.Global do
     state
   end
   defp save(state) do
-    @persister_module.store(state.partition_id, State.serialize(state))
+    apply(@persister_module, :store, [state.partition_id, State.serialize(state)])
     %State{state | dirty: false}
   end
 
