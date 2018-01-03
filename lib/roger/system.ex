@@ -123,7 +123,6 @@ defmodule Roger.System do
   def handle_info(:check_started_partitions, state) do
     Process.send_after(self(), :check_started_partitions, 1000)
     if state.channel != nil do
-      pid = Process.whereis(Roger.Partition)
       :ok = GenServer.cast(Roger.Partition, :check_partitions)
     end
     {:noreply, state}
