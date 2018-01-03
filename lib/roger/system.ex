@@ -157,13 +157,13 @@ defmodule Roger.System do
 
         # Fanout / pubsub setup
         :ok = Exchange.declare(channel, @system_exchange, :fanout)
-        {:ok, info} = Queue.declare(channel, "", exclusive: true)
+        {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
         Queue.bind(channel, info.queue, @system_exchange)
-        {:ok, _} = AMQP.Basic.consume(channel, info.queue)
+        {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
         # reply queue
-        {:ok, info} = Queue.declare(channel, "", exclusive: true)
-        {:ok, _} = AMQP.Basic.consume(channel, info.queue)
+        {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
+        {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
         {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
 
@@ -171,6 +171,14 @@ defmodule Roger.System do
         Process.send_after(self(), :timeout, 1000) # try again if the AMQP client is back up
         {:noreply, %State{state | channel: nil, reply_queue: nil}}
     end
+  end
+
+  defp node_name do
+    to_string(Node.self())
+  end
+
+  defp reply_node_name do
+    node_name() <> "-reply"
   end
 
   defp dispatch_command({:ping, _args}) do
