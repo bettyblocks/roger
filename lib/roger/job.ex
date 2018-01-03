@@ -110,18 +110,25 @@ defmodule Roger.Job do
   Creates a new job based on a job module.
 
   The given `module` must exist as an Elixir module and must be
-  implementing the Job behaviour (`use Roger.Job`).
+  implementing the Job behaviour (`use Roger.Job`). Arguments can be
+  passed by the `args` parameter as a list. Job `id` is a random hex assigned to the job.
 
   The function returns the Job struct, which can be sent off to the
   queues using `Job.enqueue/2`.
+
+  ## Examples
+
+      iex> Job.create(CustomJob, [:first_arg])
+      %Job{id: "rjketvpp80kc9n0a426fai94rqkga8v6", module: CustomJob, args: [:first_arg]}
+
   """
-  def create(module, args \\ [], id \\ nil) when is_atom(module) do
+  def create(module, args \\ [], id \\ generate_job_id()) when is_atom(module) do
     keys =
       ~w(queue_key execution_key)a
       |> Enum.map(fn(prop) -> {prop, Kernel.apply(module, prop, [args])} end)
       |> Enum.into(%{})
 
-    %__MODULE__{module: module, args: args, id: id || generate_job_id()}
+    %__MODULE__{module: module, args: args, id: id}
     |> Map.merge(keys)
     |> validate
   end
