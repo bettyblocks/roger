@@ -81,13 +81,20 @@ defmodule Roger.Job do
   implement its required `perform/1` function.
   """
   defmacro __using__(_) do
-
-    quote do
+    quote location: :keep do
+      @behaviour Roger.Job
       @after_compile __MODULE__
 
+      @doc false
       def queue_key(_args), do: nil
+
+      @doc false
       def execution_key(_args), do: nil
+
+      @doc false
       def queue_type(_args), do: :default
+
+      @doc false
       def retryable?(), do: false
 
       defoverridable queue_key: 1, execution_key: 1, queue_type: 1, retryable?: 0
@@ -105,6 +112,7 @@ defmodule Roger.Job do
   @callback execution_key(any) :: String.t
   @callback queue_type(any) :: atom
   @callback perform(any) :: any
+  @callback retryable?() :: true | false
 
   @doc """
   Creates a new job based on a job module.
@@ -118,9 +126,9 @@ defmodule Roger.Job do
 
   ## Examples
 
-      iex> Job.create(CustomJob, [:first_arg])
-      %Job{id: "rjketvpp80kc9n0a426fai94rqkga8v6", module: CustomJob, args: [:first_arg]}
-
+      iex> {:ok, job} = Roger.Job.create(Roger.JobTest.SquareJob, [4])
+      iex> job.__struct__
+      Roger.Job
   """
   def create(module, args \\ [], id \\ generate_job_id()) when is_atom(module) do
     keys =

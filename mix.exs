@@ -3,8 +3,8 @@ defmodule Roger.Mixfile do
 
   def project do
     [app: :roger,
-     version: "1.2.1",
-     elixir: "~> 1.3",
+     version: "1.3.0",
+     elixir: "~> 1.4",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -34,7 +34,7 @@ defmodule Roger.Mixfile do
 
   # Configuration for the OTP application
   def application do
-    [applications: [:amqp, :gproc, :logger, :singleton],
+    [extra_applications: [:logger],
      mod: {Roger, []}]
   end
 
