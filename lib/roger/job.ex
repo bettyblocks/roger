@@ -126,9 +126,9 @@ defmodule Roger.Job do
 
   ## Examples
 
-      iex> Roger.Job.create(CustomJob, [:first_arg])
-      %Roger.Job{id: "rjketvpp80kc9n0a426fai94rqkga8v6", module: CustomJob, args: [:first_arg]}
-
+      iex> {:ok, job} = Roger.Job.create(Roger.JobTest.SquareJob, [4])
+      iex> job.__struct__
+      Roger.Job
   """
   def create(module, args \\ [], id \\ generate_job_id()) when is_atom(module) do
     keys =
