@@ -126,7 +126,7 @@ defmodule Roger.Job do
 
   ## Examples
 
-      iex> Job.create(CustomJob, [:first_arg])
+      iex> Roger.Job.create(CustomJob, [:first_arg])
       %Roger.Job{id: "rjketvpp80kc9n0a426fai94rqkga8v6", module: CustomJob, args: [:first_arg]}
 
   """
