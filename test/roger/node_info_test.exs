@@ -58,7 +58,7 @@ defmodule Roger.Partition.NodeInfoTest do
 
     {:ok, job} = Job.create(SlowTestJob, 4)
     :ok = Job.enqueue(job, @app)
-    :timer.sleep 10
+    :timer.sleep 100
 
     info = NodeInfo.running_partitions
 
