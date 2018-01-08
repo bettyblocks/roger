@@ -25,15 +25,11 @@ defmodule Roger.Partition.Consumer do
   end
 
   def get_queues(partition_id) do
-    if is_alive?(partition_id) do
-      GenServer.call(GProc.via(name(partition_id)), :get_queues)
-    end
+    GenServer.call(GProc.via(name(partition_id)), :get_queues)
   end
 
   def reconfigure(partition_id, queues) do
-    if is_alive?(partition_id) do
-      GenServer.call(GProc.via(name(partition_id)), {:reconfigure, queues})
-    end
+    GenServer.call(GProc.via(name(partition_id)), {:reconfigure, queues})
   end
 
   def pause(partition_id, queue) do
