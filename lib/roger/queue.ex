@@ -3,7 +3,7 @@ defmodule Roger.Queue do
   Functions related to queues.
   """
 
-  alias Roger.AMQPClient
+  alias Roger.{Queue, AMQPClient}
 
   @type t :: %__MODULE__{}
 
@@ -15,6 +15,16 @@ defmodule Roger.Queue do
 
   def define(type, max_workers) do
     %__MODULE__{type: type, max_workers: max_workers}
+  end
+
+  @doc """
+  Setup channel with needed settings for correct working inside roger.
+  """
+  @spec setup_channel(queue :: t) :: {atom, t}
+  def setup_channel(%Queue{} = queue) do
+    {:ok, channel} = Roger.AMQPClient.open_channel()
+    :ok = AMQP.Basic.qos(channel, prefetch_count: queue.max_workers)
+    {:ok, %Queue{queue | channel: channel}}
   end
 
   @doc """
@@ -31,7 +41,7 @@ defmodule Roger.Queue do
   def purge(partition_id, queue_type) do
     {:ok, channel} = AMQPClient.open_channel()
 
-    queue = Roger.Queue.make_name(partition_id, queue_type)
+    queue = make_name(partition_id, queue_type)
     result = AMQP.Queue.purge(channel, queue)
 
     :ok = AMQP.Channel.close(channel)

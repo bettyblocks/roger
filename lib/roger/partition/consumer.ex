@@ -153,7 +153,6 @@ defmodule Roger.Partition.Consumer do
   ## Internal functions
 
   defp do_reconfigure(state, new_queues) do
-
     existing_queue_types = (for q <- state.queues, do: q.type) |> Enum.into(MapSet.new)
     new_queues = for {type, max_workers} <- new_queues, do: Queue.define(type, max_workers)
     new_queue_types = (for q <- new_queues, do: q.type) |> Enum.into(MapSet.new)
@@ -203,13 +202,12 @@ defmodule Roger.Partition.Consumer do
     new_queues = MapSet.difference(new_queue_types, existing_queue_types)
     |> pick.(new_queues)
     |> Enum.map(fn(q) ->
-      {:ok, channel} = Roger.AMQPClient.open_channel()
-      Process.monitor(channel.pid)
+      {:ok, q} = Queue.setup_channel(q)
+      Process.monitor(q.channel.pid)
       if !MapSet.member?(state.paused, q.type) and q.max_workers > 0 do
-        :ok = AMQP.Basic.qos(channel, prefetch_count: q.max_workers)
-        consume(%Queue{q | channel: channel}, state)
+        consume(q, state)
       else
-        %Queue{q | channel: channel}
+        q
       end
     end)
 
