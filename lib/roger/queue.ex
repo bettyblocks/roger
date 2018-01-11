@@ -18,7 +18,8 @@ defmodule Roger.Queue do
   end
 
   @doc """
-  Setup channel with needed settings for correct working inside roger.
+  Setup channel with the queue options.
+  This makes sure the channel prefetch count follows the queue max worker size.
   """
   @spec setup_channel(queue :: t) :: {atom, t}
   def setup_channel(%Queue{} = queue) do
