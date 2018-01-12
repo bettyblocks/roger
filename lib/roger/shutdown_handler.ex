@@ -4,7 +4,10 @@ defmodule Roger.ShutdownHandler do
   By first stop consuming new jobs and then wait for certain time for workers to finish.
   """
 
-  use GenServer, restart: :transient, shutdown: 4_500_000
+  @shutdown_timeout 4_500_000
+  use GenServer, restart: :transient, shutdown: @shutdown_timeout
+
+  require Logger
 
   alias Roger.System
 
@@ -25,21 +28,35 @@ defmodule Roger.ShutdownHandler do
   def terminate(_, _), do: nil
 
   defp handle_shutdown(state) do
-    System.set_inactive()
+    Logger.info("Gracefully shutting down Roger.")
+    with :ok = System.set_inactive(),
+         :ok = System.unsubscribe_all() do
+      Logger.info("Stopped Roger from accepting new jobs")
+      timer = :erlang.start_timer(@shutdown_timeout - 100_000, self(), :end_of_grace_period)
 
-    timer_ref = :erlang.start
-    IO.inspect "handle shutdown"
-    :timer.sleep 10_000
-    Roger.AMQPClient.close()
-    IO.inspect "completed handling"
+      Roger.NodeInfo.running_worker_pids()
+      |> Enum.map(&Process.monitor(&1))
+      |> Enum.into(MapSet.new())
+      |> await_workers(timer)
+      Roger.AMQPClient.close()
+      Logger.info("Finished shutting down roger.")
+    end
   end
 
-  defp stop_consumers() do
-
+  defp await_workers(worker_pids, _) when worker_pids == %MapSet{} do
+    :ok
   end
 
-  defp await_workers() do
-
+  defp await_workers(worker_pids, timer) do
+    Logger.info("Waiting for #{MapSet.size(worker_pids)} jobs to finish.")
+    receive do
+      {:DOWN, downed_pid, _, _, _} ->
+        worker_pids
+        |> MapSet.delete(downed_pid)
+        |> await_workers(timer)
+      {:timeout, ^timer, :end_of_grace_period} ->
+        :ok
+    end
   end
 
 end

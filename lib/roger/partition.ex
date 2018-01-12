@@ -170,7 +170,7 @@ defmodule Roger.Partition do
     case Roger.GProc.whereis({:app_supervisor, id}) do
       pid when is_pid(pid) ->
         with :ok <- Consumer.pause_all(id) do
-          :ok
+          {:ok, state}
         else
           err -> Logger.debug "Something went wrong stopping the partition #{inspect(err)}"
         end

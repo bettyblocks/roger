@@ -47,15 +47,22 @@ defmodule Roger.System do
   @doc """
   Return whether the node is active or shutting down
   """
-  def active? do
+  def active?() do
     GenServer.call(__MODULE__, :is_active)
   end
 
   @doc """
   Set node to inactive so it can no longer start new partitions
   """
-  def set_inactive do
+  def set_inactive() do
     GenServer.call(__MODULE__, :set_inactive)
+  end
+
+  @doc """
+  Unsubscribe from all queues - ie. stop listening for jobs
+  """
+  def unsubscribe_all() do
+    GenServer.call(__MODULE__, :unsubscribe_all)
   end
 
   ###
@@ -114,6 +121,15 @@ defmodule Roger.System do
 
   def handle_call(:set_inactive, _from, state) do
     {:reply, :ok, %{state | active: false}}
+  end
+
+  def handle_call(:unsubscribe_all, _from, state) do
+    unless state.active do
+      Enum.each(Roger.NodeInfo.running_partition_ids(), fn(id) ->
+        Roger.Partition.safe_stop(id)
+      end)
+    end
+    {:reply, :ok, state}
   end
 
   def handle_call(_, _, %State{channel: nil} = state) do
