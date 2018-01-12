@@ -44,6 +44,20 @@ defmodule Roger.System do
     GenServer.call(__MODULE__, :is_connected)
   end
 
+  @doc """
+  Return whether the node is active or shutting down
+  """
+  def active? do
+    GenServer.call(__MODULE__, :is_active)
+  end
+
+  @doc """
+  Set node to inactive so it can no longer start new partitions
+  """
+  def set_inactive do
+    GenServer.call(__MODULE__, :set_inactive)
+  end
+
   ###
 
   defmodule Reply do
@@ -63,7 +77,7 @@ defmodule Roger.System do
 
   defmodule State do
     @moduledoc false
-    defstruct channel: nil, reply_queue: nil, replies: %{}
+    defstruct channel: nil, reply_queue: nil, replies: %{}, active: true
     def add_waiting_reply(state, id, from, nodes) do
       %{state | replies: Map.put(state.replies, id, Reply.new(from, nodes))}
     end
@@ -94,6 +108,14 @@ defmodule Roger.System do
     {:reply, state.channel != nil, state}
   end
 
+  def handle_call(:is_active, _from, state) do
+    {:reply, state.active, state}
+  end
+
+  def handle_call(:set_inactive, _from, state) do
+    {:reply, :ok, %{state | active: false}}
+  end
+
   def handle_call(_, _, %State{channel: nil} = state) do
     {:reply, {:error, :disconnected}, state}
   end
@@ -122,7 +144,7 @@ defmodule Roger.System do
 
   def handle_info(:check_started_partitions, state) do
     Process.send_after(self(), :check_started_partitions, 1000)
-    if state.channel != nil do
+    if state.channel != nil && state.active do
       :ok = GenServer.cast(Roger.Partition, :check_partitions)
     end
     {:noreply, state}
