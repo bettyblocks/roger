@@ -17,16 +17,21 @@ defmodule Roger do
       worker(Roger.System, []),
       supervisor(Roger.PartitionSupervisor, []),
       worker(Roger.Partition, []),
+      Roger.ShutdownHandler.child_spec([])
     ]
 
     opts = [strategy: :one_for_one, name: Roger.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
-  @doc false
-  def prep_stop(_) do
-    Roger.AMQPClient.close()
-  end
+#  @doc """
+#  This handles correctly shutting down the workers.
+#  By first stop consuming new jobs and then wait for certain time for workers to finish.
+#  """
+#  def prep_stop(_) do
+#    :timer.sleep 50_000
+#    Roger.AMQPClient.close()
+#  end
 
   @doc """
   Returns the current time in milliseconds.
