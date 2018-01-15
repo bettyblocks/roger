@@ -73,7 +73,7 @@ defmodule Roger.Partition.ConsumerTest do
     :ok = Consumer.reconfigure(@app, [])
 
     :ok = Consumer.reconfigure(@app, [default: 10])
-    :timer.sleep 10
+    :timer.sleep 100
 
     refute_receive {:done, :job_2}
 
