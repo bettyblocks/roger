@@ -21,6 +21,7 @@ Roger is a multi-tenant, high performance job processing system for Elixir.
 - Resilient against AMQP network conditions (reconnects, process crashes, etc)
 - Partition state persistence between restarts (configurable)
 - Detailed queue / partition information
+- Graceful shutdown on stopping 
 
 ## Getting started
 
@@ -88,3 +89,23 @@ Roger.Job.enqueue(job, "myapp")
 
 ```
 
+## Advance options
+
+### Graceful shutdown
+
+For graceful shutdown with like phoenix you need to disable auto starting roger and start it in the supervisor tree.
+
+To do that you need to set the following config:
+
+```elixir
+config :roger,
+  start_on_application: false
+```
+
+By default the graceful shutdown wait 10 seconds on the workers but it can be changed by the `shutdown_timeout` setting.
+
+And add the following line to your app supervisor tree at the end because the genservers get shutdown from the last to the first.
+
+```elixir
+supervisor(Roger, [])
+```
