@@ -10,6 +10,14 @@ defmodule Roger do
   def start(_, _) do
     import Supervisor.Spec, warn: false
 
+    if Application.get_env(:roger, :start_on_application, true) do
+      start_link()
+    else
+      Supervisor.start_link([], strategy: :one_for_one)
+    end
+  end
+
+  def start_link(opts \\ []) do
     amqp_config = Application.get_env(:roger, :amqp)
 
     children = [
