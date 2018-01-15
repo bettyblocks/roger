@@ -12,22 +12,20 @@ defmodule Roger.ShutdownHandler do
   alias Roger.System
 
   def start_link([]) do
-    IO.puts " start link"
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   def init([]) do
-    IO.puts "starting shutdown handler"
     Process.flag(:trap_exit, true)
     {:ok, %{}}
   end
 
-  def terminate({:shutdown, _reason}, state), do: handle_shutdown(state)
-  def terminate(:shutdown, state), do: handle_shutdown(state)
-  def terminate(:normal, state), do: handle_shutdown(state)
+  def terminate({:shutdown, _reason}, _), do: handle_shutdown()
+  def terminate(:shutdown, _), do: handle_shutdown()
+  def terminate(:normal, _), do: handle_shutdown()
   def terminate(_, _), do: nil
 
-  defp handle_shutdown(state) do
+  defp handle_shutdown() do
     Logger.info("Gracefully shutting down Roger.")
     with :ok = System.set_inactive(),
          :ok = System.unsubscribe_all() do
