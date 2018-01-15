@@ -4,7 +4,8 @@ defmodule Roger.ShutdownHandler do
   By first stop consuming new jobs and then wait for certain time for workers to finish.
   """
 
-  @shutdown_timeout 4_500_000
+  @shutdown_overflow 5_000
+  @shutdown_timeout Application.get_env(:roger, :shutdown_timeout, 15_000) + @shutdown_overflow
   use GenServer, restart: :transient, shutdown: @shutdown_timeout
 
   require Logger
@@ -30,7 +31,7 @@ defmodule Roger.ShutdownHandler do
     with :ok = System.set_inactive(),
          :ok = System.unsubscribe_all() do
       Logger.info("Stopped Roger from accepting new jobs")
-      timer = :erlang.start_timer(@shutdown_timeout - 100_000, self(), :end_of_grace_period)
+      timer = :erlang.start_timer(@shutdown_timeout - @shutdown_overflow, self(), :end_of_grace_period)
 
       Roger.NodeInfo.running_worker_pids()
       |> Enum.map(&Process.monitor(&1))
