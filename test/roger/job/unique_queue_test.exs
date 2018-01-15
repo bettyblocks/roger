@@ -23,6 +23,8 @@ defmodule Roger.Job.UniqueQueueTest do
     {:error, :duplicate} = Job.enqueue(job, @app)
     assert_receive "job1"
 
+    :timer.sleep 50
+
     # can receive again after job has been processed
     :ok = Job.enqueue(job, @app)
     {:error, :duplicate} = Job.enqueue(job, @app)
