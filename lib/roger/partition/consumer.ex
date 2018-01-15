@@ -10,7 +10,7 @@ defmodule Roger.Partition.Consumer do
   """
 
   require Logger
-  alias Roger.{System, Queue, GProc,
+  alias Roger.{Queue, GProc,
                Partition.WorkerSupervisor,
                Partition.Global}
 
@@ -49,7 +49,7 @@ defmodule Roger.Partition.Consumer do
   end
 
   def resume(partition_id, queue) do
-    if is_alive?(partition_id) && System.active?() do
+    if is_alive?(partition_id) do
       GenServer.call(GProc.via(name(partition_id)), {:resume, queue})
     end
   end

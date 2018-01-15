@@ -173,7 +173,7 @@ defmodule Roger.System do
   def handle_info({:basic_deliver, payload, meta = %{content_type: @command_content_type}}, state) do
     command = Command.decode(payload)
     reply = try do
-              dispatch_command(command)
+              dispatch_command(command, state)
             catch
               e ->
                 Logger.warn "#{inspect e}"
@@ -227,32 +227,38 @@ defmodule Roger.System do
     node_name() <> "-reply"
   end
 
-  defp dispatch_command({:ping, _args}) do
+  defp dispatch_command({:ping, _args}, _state) do
     :pong
   end
 
-  defp dispatch_command({:cancel, [job_id: job_id]}) do
+  defp dispatch_command({:cancel, [job_id: job_id]}, state) do
     # Cancel any running jobs
-    worker_name = Roger.Partition.Worker.name(job_id)
-    for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
-      Process.exit(pid, :exit)
+    if state.active do
+      worker_name = Roger.Partition.Worker.name(job_id)
+      for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
+        Process.exit(pid, :exit)
+      end
     end
     :ok
   end
 
-  defp dispatch_command({:queue_pause, [queue: queue, partition_id: partition_id]}) do
-    Roger.Partition.Consumer.pause(partition_id, queue)
+  defp dispatch_command({:queue_pause, [queue: queue, partition_id: partition_id]}, state) do
+    if state.active do
+      Roger.Partition.Consumer.pause(partition_id, queue)
+    end
   end
 
-  defp dispatch_command({:queue_resume, [queue: queue, partition_id: partition_id]}) do
-    Roger.Partition.Consumer.resume(partition_id, queue)
+  defp dispatch_command({:queue_resume, [queue: queue, partition_id: partition_id]}, state) do
+    if state.active do
+      Roger.Partition.Consumer.resume(partition_id, queue)
+    end
   end
 
-  defp dispatch_command({{:apply, mod, fun}, args}) do
+  defp dispatch_command({{:apply, mod, fun}, args}, _state) do
     Kernel.apply(mod, fun, args)
   end
 
-  defp dispatch_command({command, args}) do
+  defp dispatch_command({command, args}, _state) do
     Logger.warn "Received unknown command: #{inspect command} #{inspect args}"
     {:error, :unknown_command}
   end
