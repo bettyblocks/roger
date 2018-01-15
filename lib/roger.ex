@@ -8,8 +8,6 @@ defmodule Roger do
   require Logger
 
   def start(_, _) do
-    import Supervisor.Spec, warn: false
-
     if Application.get_env(:roger, :start_on_application, true) do
       start_link()
     else
@@ -17,7 +15,9 @@ defmodule Roger do
     end
   end
 
-  def start_link(opts \\ []) do
+  def start_link(_opts \\ []) do
+    import Supervisor.Spec, warn: false
+
     amqp_config = Application.get_env(:roger, :amqp)
 
     children = [
