@@ -7,7 +7,7 @@ defmodule Roger.Partition.Worker.Callback do
   which invokes functions on various places in the job's life
   cycle.
 
-      config :roger, Roger.Partition.Worker,
+      config :roger,
         callbacks: MyWorkerModule
 
   In this scenario, the mentioned `MyWorkerModule` needs to *use*

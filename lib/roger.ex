@@ -10,7 +10,7 @@ defmodule Roger do
   def start(_, _) do
     import Supervisor.Spec, warn: false
 
-    amqp_config = Application.get_env(:roger, Roger.AMQPClient)
+    amqp_config = Application.get_env(:roger, :amqp)
 
     children = [
       worker(Roger.AMQPClient, [amqp_config]),
@@ -23,15 +23,6 @@ defmodule Roger do
     opts = [strategy: :one_for_one, name: Roger.Supervisor]
     Supervisor.start_link(children, opts)
   end
-
-#  @doc """
-#  This handles correctly shutting down the workers.
-#  By first stop consuming new jobs and then wait for certain time for workers to finish.
-#  """
-#  def prep_stop(_) do
-#    :timer.sleep 50_000
-#    Roger.AMQPClient.close()
-#  end
 
   @doc """
   Returns the current time in milliseconds.

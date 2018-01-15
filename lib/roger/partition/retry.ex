@@ -9,8 +9,8 @@ defmodule Roger.Partition.Retry do
 
   To override these levels, set the following configuration:
 
-      config :roger, Roger.Partition.Retry,
-        levels: [1, 10, 60]
+      config :roger,
+        retry_levels: [1, 10, 60]
 
   This sets 3 retry levels, the first time is a job retried after 1
   second, then after 10 seconds and finally after 60.
@@ -29,7 +29,7 @@ defmodule Roger.Partition.Retry do
   alias Roger.{Queue, Job}
 
   @default_levels [1, 3, 5, 10, 20, 35, 60, 100, 200, 400, 1000, 1800]
-  @levels Application.get_env(:roger, __MODULE__, [])[:levels] || @default_levels
+  @levels Application.get_env(:roger, :retry_levels) || @default_levels
 
   @doc """
   Given an AMQP channel and the partition, queues the given job for retry.

@@ -16,7 +16,7 @@ defmodule Roger.AppCase do
         Process.register(self(), unquote(__CALLER__.module))
         {:ok, _pid} = Partition.start(@app, unquote(queues))
 
-        Application.put_env(:roger, Roger.Partition.Worker, callbacks: (unquote(opts)[:callbacks] || nil))
+        Application.put_env(:roger, :callbacks, (unquote(opts)[:callbacks] || nil))
 
         on_exit fn ->
 
@@ -39,7 +39,7 @@ defmodule Roger.AppCase do
           AMQP.Channel.close(channel)
 
           # Remove all roger env. variables except AMQP connection info
-          for {key, _} <- Application.get_all_env(:roger), key != Roger.AMQPClient do
+          for {key, _} <- Application.get_all_env(:roger), key != :amqp do
             Application.delete_env(:roger, key)
           end
         end

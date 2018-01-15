@@ -128,7 +128,7 @@ defmodule Roger.Partition.Worker do
 
   # Run the given worker callback, if a callback module has been defined.
   defp callback(callback, args) when is_atom(callback) do
-    mod = Application.get_env(:roger, __MODULE__, [])[:callbacks]
+    mod = Application.get_env(:roger, :callbacks)
     if mod != nil do
       try do
         # We never want the callback to crash the worker process.
