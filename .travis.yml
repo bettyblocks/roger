@@ -4,8 +4,10 @@ services:
   - rabbitmq
 elixir:
   - 1.4.2
+  - 1.5.3
 otp_release:
   - 19.0
+  - 20.2
 script: MIX_ENV=test mix compile --warnings-as-errors && MIX_ENV=test mix test && integration_test/run
 after_script:
   - mix deps.get --only docs
