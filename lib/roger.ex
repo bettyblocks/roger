@@ -25,7 +25,7 @@ defmodule Roger do
       worker(Roger.System, []),
       supervisor(Roger.PartitionSupervisor, []),
       worker(Roger.Partition, []),
-      worker(Roger.ShutdownHandler, [])
+      Roger.ShutdownHandler.child_spec([])
     ]
 
     opts = [strategy: :one_for_one, name: Roger.Supervisor]
