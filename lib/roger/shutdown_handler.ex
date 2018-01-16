@@ -54,6 +54,7 @@ defmodule Roger.ShutdownHandler do
         |> MapSet.delete(downed_pid)
         |> await_workers(timer)
       {:timeout, ^timer, :end_of_grace_period} ->
+        Logger.warn("Terminated #{MapSet.size(worker_pids)} jobs because it took longer then termination timeout.")
         :ok
     end
   end
