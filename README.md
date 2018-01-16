@@ -27,7 +27,7 @@ Roger is a multi-tenant, high performance job processing system for Elixir.
 
 ### 1. Check requirements
 
-- Elixir 1.4 or greater
+- Elixir 1.5 or greater
 - RabbitMQ 3.6.0 or greater
 
 ### 2. Install Roger
