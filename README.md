@@ -21,12 +21,13 @@ Roger is a multi-tenant, high performance job processing system for Elixir.
 - Resilient against AMQP network conditions (reconnects, process crashes, etc)
 - Partition state persistence between restarts (configurable)
 - Detailed queue / partition information
+- Graceful shutdown on stopping 
 
 ## Getting started
 
 ### 1. Check requirements
 
-- Elixir 1.4 or greater
+- Elixir 1.5.1 or greater
 - RabbitMQ 3.6.0 or greater
 
 ### 2. Install Roger
@@ -46,9 +47,11 @@ Then run `mix deps.get`.
 Configure hosts and default queues:
 
 ```elixir
-config :roger, Roger.AMQPClient,
-  host: "localhost",
-  port: 5672
+config :roger,
+  amqp: [
+    host: "localhost",
+    port: 5672
+  ]
 
 config :roger, :partitions,
   example: [default: 10, other: 2]
@@ -86,3 +89,23 @@ Roger.Job.enqueue(job, "myapp")
 
 ```
 
+## Advanced options
+
+### Graceful shutdown
+
+For graceful shutdown with like phoenix you need to disable auto starting roger and start it in the supervisor tree.
+
+To do that you need to set the following config:
+
+```elixir
+config :roger,
+  start_on_application: false
+```
+
+By default the graceful shutdown wait 10 seconds on the workers but it can be changed by the `shutdown_timeout` setting.
+
+And add the following line to your app supervisor tree at the end because the genservers get shutdown from the last to the first.
+
+```elixir
+supervisor(Roger, [])
+```

@@ -8,24 +8,28 @@ defmodule Roger do
   require Logger
 
   def start(_, _) do
+    if Application.get_env(:roger, :start_on_application, true) do
+      start_link()
+    else
+      Supervisor.start_link([], strategy: :one_for_one)
+    end
+  end
+
+  def start_link(_opts \\ []) do
     import Supervisor.Spec, warn: false
 
-    amqp_config = Application.get_env(:roger, Roger.AMQPClient)
+    amqp_config = Application.get_env(:roger, :amqp)
 
     children = [
       worker(Roger.AMQPClient, [amqp_config]),
       worker(Roger.System, []),
       supervisor(Roger.PartitionSupervisor, []),
       worker(Roger.Partition, []),
+      Roger.ShutdownHandler.child_spec([])
     ]
 
     opts = [strategy: :one_for_one, name: Roger.Supervisor]
     Supervisor.start_link(children, opts)
-  end
-
-  @doc false
-  def prep_stop(_) do
-    Roger.AMQPClient.close()
   end
 
   @doc """

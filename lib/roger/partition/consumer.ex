@@ -38,6 +38,16 @@ defmodule Roger.Partition.Consumer do
     end
   end
 
+  @doc """
+  Pauses all running queues on current consumer
+  """
+  @spec pause_all(String.t) :: :ok | nil
+  def pause_all(partition_id) do
+    if is_alive?(partition_id) do
+      GenServer.call(GProc.via(name(partition_id)), {:pause_all})
+    end
+  end
+
   def resume(partition_id, queue) do
     if is_alive?(partition_id) do
       GenServer.call(GProc.via(name(partition_id)), {:resume, queue})
@@ -54,6 +64,10 @@ defmodule Roger.Partition.Consumer do
   defmodule State do
     @moduledoc false
     defstruct partition_id: nil, channel: nil, queues: [], paused: MapSet.new, closing: %{}, pausing: %{}
+
+    def queue_pause(state, queue) do
+      %{state | paused: MapSet.put(state.paused, queue)}
+    end
   end
 
   def init([partition_id]) do
@@ -85,7 +99,14 @@ defmodule Roger.Partition.Consumer do
   end
 
   def handle_call({:pause, queue}, _from, state) do
-    state = %{state | paused: MapSet.put(state.paused, queue)}
+    state = State.queue_pause(state, queue)
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:pause_all}, _from, state) do
+    state = Enum.reduce(state.queues, state, fn (queue, state) ->
+      State.queue_pause(state, queue.type)
+    end)
     {:reply, :ok, state}
   end
 

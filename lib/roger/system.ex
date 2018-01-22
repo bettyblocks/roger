@@ -44,6 +44,27 @@ defmodule Roger.System do
     GenServer.call(__MODULE__, :is_connected)
   end
 
+  @doc """
+  Return whether the node is active or shutting down
+  """
+  def active?() do
+    GenServer.call(__MODULE__, :is_active)
+  end
+
+  @doc """
+  Set node to inactive so it can no longer start new partitions
+  """
+  def set_inactive() do
+    GenServer.call(__MODULE__, :set_inactive)
+  end
+
+  @doc """
+  Unsubscribe from all queues - ie. stop listening for jobs
+  """
+  def unsubscribe_all() do
+    GenServer.call(__MODULE__, :unsubscribe_all)
+  end
+
   ###
 
   defmodule Reply do
@@ -63,7 +84,7 @@ defmodule Roger.System do
 
   defmodule State do
     @moduledoc false
-    defstruct channel: nil, reply_queue: nil, replies: %{}
+    defstruct channel: nil, reply_queue: nil, replies: %{}, active: true
     def add_waiting_reply(state, id, from, nodes) do
       %{state | replies: Map.put(state.replies, id, Reply.new(from, nodes))}
     end
@@ -94,6 +115,23 @@ defmodule Roger.System do
     {:reply, state.channel != nil, state}
   end
 
+  def handle_call(:is_active, _from, state) do
+    {:reply, state.active, state}
+  end
+
+  def handle_call(:set_inactive, _from, state) do
+    {:reply, :ok, %{state | active: false}}
+  end
+
+  def handle_call(:unsubscribe_all, _from, state) do
+    unless state.active do
+      Enum.each(Roger.NodeInfo.running_partition_ids(), fn(id) ->
+        Roger.Partition.safe_stop(id)
+      end)
+    end
+    {:reply, :ok, state}
+  end
+
   def handle_call(_, _, %State{channel: nil} = state) do
     {:reply, {:error, :disconnected}, state}
   end
@@ -122,7 +160,7 @@ defmodule Roger.System do
 
   def handle_info(:check_started_partitions, state) do
     Process.send_after(self(), :check_started_partitions, 1000)
-    if state.channel != nil do
+    if state.channel && state.active do
       :ok = GenServer.cast(Roger.Partition, :check_partitions)
     end
     {:noreply, state}
@@ -135,7 +173,7 @@ defmodule Roger.System do
   def handle_info({:basic_deliver, payload, meta = %{content_type: @command_content_type}}, state) do
     command = Command.decode(payload)
     reply = try do
-              dispatch_command(command)
+              dispatch_command(command, state)
             catch
               e ->
                 Logger.warn "#{inspect e}"
@@ -189,32 +227,38 @@ defmodule Roger.System do
     node_name() <> "-reply"
   end
 
-  defp dispatch_command({:ping, _args}) do
+  defp dispatch_command({:ping, _args}, _state) do
     :pong
   end
 
-  defp dispatch_command({:cancel, [job_id: job_id]}) do
+  defp dispatch_command({:cancel, [job_id: job_id]}, state) do
     # Cancel any running jobs
-    worker_name = Roger.Partition.Worker.name(job_id)
-    for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
-      Process.exit(pid, :exit)
+    if state.active do
+      worker_name = Roger.Partition.Worker.name(job_id)
+      for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
+        Process.exit(pid, :exit)
+      end
     end
     :ok
   end
 
-  defp dispatch_command({:queue_pause, [queue: queue, partition_id: partition_id]}) do
-    Roger.Partition.Consumer.pause(partition_id, queue)
+  defp dispatch_command({:queue_pause, [queue: queue, partition_id: partition_id]}, state) do
+    if state.active do
+      Roger.Partition.Consumer.pause(partition_id, queue)
+    end
   end
 
-  defp dispatch_command({:queue_resume, [queue: queue, partition_id: partition_id]}) do
-    Roger.Partition.Consumer.resume(partition_id, queue)
+  defp dispatch_command({:queue_resume, [queue: queue, partition_id: partition_id]}, state) do
+    if state.active do
+      Roger.Partition.Consumer.resume(partition_id, queue)
+    end
   end
 
-  defp dispatch_command({{:apply, mod, fun}, args}) do
+  defp dispatch_command({{:apply, mod, fun}, args}, _state) do
     Kernel.apply(mod, fun, args)
   end
 
-  defp dispatch_command({command, args}) do
+  defp dispatch_command({command, args}, _state) do
     Logger.warn "Received unknown command: #{inspect command} #{inspect args}"
     {:error, :unknown_command}
   end

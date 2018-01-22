@@ -29,7 +29,7 @@ defmodule Roger.Partition.Consumer.RetryTest do
     Job.enqueue(job, @app)
 
     for n <- 0..5 do
-      assert_receive {:retry, ^n}, 200
+      assert_receive {:retry, ^n}, 500
     end
   end
 

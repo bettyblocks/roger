@@ -37,7 +37,7 @@ defmodule Roger.Integration.Slave do
 
 
   def handle_info(:timeout, state) do
-    Application.put_env(:roger, Roger.Partition.Worker, [callbacks: WorkerCallback])
+    Application.put_env(:roger, :callbacks, WorkerCallback)
 
     {:ok, _} = Application.ensure_all_started(:roger)
     {:ok, _pid} = Roger.Partition.start("integration", [default: 10])

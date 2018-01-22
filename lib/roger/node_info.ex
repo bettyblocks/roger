@@ -56,4 +56,22 @@ defmodule Roger.NodeInfo do
     end
   end
 
+  @doc """
+  Retreive all the currently running partition ids.
+  """
+  def running_partition_ids() do
+    for {:app_supervisor, id} <- Roger.GProc.find_names({:app_supervisor, :_}) do
+      id
+    end
+  end
+
+  @doc """
+  Retreive all running worker pids on this node.
+  """
+  def running_worker_pids() do
+    for {pid, _job} <- Roger.GProc.find_properties({:roger_job_worker_meta, :_, :_}) do
+      pid
+    end
+  end
+
 end

@@ -24,7 +24,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test before-run worker callback" do
-    Application.put_env(:roger, Roger.Partition.Worker, callbacks: BeforeRunWorkerCallback)
+    Application.put_env(:roger, :callbacks, BeforeRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
 
     receive do
@@ -45,7 +45,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test after-run worker callback" do
-    Application.put_env(:roger, Roger.Partition.Worker, callbacks: AfterRunWorkerCallback)
+    Application.put_env(:roger, :callbacks, AfterRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
 
     receive do
@@ -74,7 +74,7 @@ defmodule Roger.Worker.CallbacksTest do
   end
 
   test "test before-and-after-run worker callbacks with state passing through" do
-    Application.put_env(:roger, Roger.Partition.Worker, callbacks: BeforeAfterRunWorkerCallback)
+    Application.put_env(:roger, :callbacks, BeforeAfterRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       {:after_run_ok, r} ->
@@ -107,7 +107,7 @@ defmodule Roger.Worker.CallbacksTest do
   @payload :erlang.term_to_binary(%Job{id: "asdf", module: ErrorJob, args: []})
 
   test "test on_error worker callback" do
-    Application.put_env(:roger, Roger.Partition.Worker, callbacks: OnErrorWorkerCallback)
+    Application.put_env(:roger, :callbacks, OnErrorWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
     receive do
       :on_error_ok -> :ok

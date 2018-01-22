@@ -53,6 +53,14 @@ defmodule Roger.Partition do
   end
 
   @doc """
+  Stop the parition of accepting new jobs so it can finish of the remaining jobs
+  """
+  @spec safe_stop(id :: String.t) :: :ok | {:error, :not_running}
+  def safe_stop(id) do
+    GenServer.call(__MODULE__, {:safe_stop, id})
+  end
+
+  @doc """
   Reconfigure the given Roger partition
 
   Use this function to adjust the queues for the partition. The
@@ -85,6 +93,11 @@ defmodule Roger.Partition do
 
   def handle_call({:stop, partition}, _from, state) do
     {reply, state} = stop_partition(partition, state)
+    {:reply, reply, state}
+  end
+
+  def handle_call({:safe_stop, partition}, _from, state) do
+    {reply, state} = safe_stop_partition(partition, state)
     {:reply, reply, state}
   end
 
@@ -134,7 +147,7 @@ defmodule Roger.Partition do
   end
 
   defp start_partition(id, queues, state) do
-    if System.connected? do
+    if System.connected? && System.active? do
       # make sure a statemanager instance is running
       Singleton.start_child(Global, [id], {:app_global, id})
       # start partition supervision tree
@@ -150,6 +163,19 @@ defmodule Roger.Partition do
       {{:ok, pid}, %State{state | monitored: Map.put(state.monitored, pid, {id, queues})}}
     else
       {:waiting, %State{state | waiting: Map.put(state.waiting, id, {id, queues})}}
+    end
+  end
+
+  defp safe_stop_partition(id, state) do
+    case Roger.GProc.whereis({:app_supervisor, id}) do
+      pid when is_pid(pid) ->
+        with :ok <- Consumer.pause_all(id) do
+          {:ok, state}
+        else
+          err -> Logger.debug "Something went wrong stopping the partition #{inspect(err)}"
+        end
+      :nil ->
+        {{:error, :not_running}, state}
     end
   end
 

@@ -25,7 +25,7 @@ defmodule Roger.Partition.Global do
   restarts. By default, the global state is loaded from and written to
   the filesystem, but it is possible to override the persister, like this:
 
-      config :roger, Roger.Partition.Global,
+      config :roger,
         persister: Your.PersisterModule
 
   The persister module must implement the
@@ -40,7 +40,7 @@ defmodule Roger.Partition.Global do
   alias Roger.{KeySet, System}
   alias Roger.Partition.Global.State
 
-  @persister_module Application.get_env(:roger, __MODULE__, [])[:persister] || Roger.Partition.Global.StatePersister.Stub
+  @persister_module Application.get_env(:roger, :persister) || Roger.Partition.Global.StatePersister.Stub
 
   @doc """
   Mark a job id as cancelled.

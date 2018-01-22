@@ -6,9 +6,11 @@
 Roger depends on RabbitMQ as its backing store. The minimum
 configuration is below:
 
-    config :roger, Roger.AMQPClient,
-      host: "localhost",
-      port: 5672
+    config :roger,
+      amqp: [
+        host: "localhost",
+        port: 5672
+      ]
 
 These options are directly forwarded
 to [the AMQP connection](https://hexdocs.pm/amqp/0.1.0/).  The most
@@ -32,7 +34,7 @@ common options are:
 Roger can be configured with a callback module which invoke functions
 on various places in a job's life cycle.
 
-    config :roger, Roger.Partition.Worker,
+    config :roger,
       callbacks: MyWorkerModule
 
 In this scenario, `MyWorkerModule` needs to *use* `Roger.Worker.Callback`:
@@ -66,7 +68,7 @@ node restarts. By default, the global state is loaded from and written
 to the filesystem, but it is possible to override the persister, like
 this:
 
-    config :roger, Roger.Partition.Global,
+    config :roger,
       persister: Your.PersisterModule
 
 The persister module must implement the

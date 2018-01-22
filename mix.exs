@@ -3,8 +3,8 @@ defmodule Roger.Mixfile do
 
   def project do
     [app: :roger,
-     version: "1.3.2",
-     elixir: "~> 1.4",
+     version: "1.4.0",
+     elixir: ">= 1.5.1",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
