@@ -89,7 +89,7 @@ Roger.Job.enqueue(job, "myapp")
 
 ```
 
-## Advance options
+## Advanced options
 
 ### Graceful shutdown
 
