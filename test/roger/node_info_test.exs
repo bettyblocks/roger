@@ -29,7 +29,7 @@ defmodule Roger.Partition.NodeInfoTest do
 
     {:ok, job} = Job.create(SlowTestJob, 1)
     :ok = Job.enqueue(job, @app)
-    :timer.sleep 10
+    :timer.sleep 50
 
     info = NodeInfo.running_jobs
     # assert info[@app] == NodeInfo.running_jobs(@app)
