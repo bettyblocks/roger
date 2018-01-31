@@ -11,10 +11,10 @@ defmodule Roger.Partition.Worker.Callback do
         callbacks: MyWorkerModule
 
   In this scenario, the mentioned `MyWorkerModule` needs to *use*
-  `Roger.Worker.Callback`:
+  `Roger.Partition.Worker.Callback`:
 
       defmodule MyWorkerModule do
-        use Roger.Worker.Callback
+        use Roger.Partition.Worker.Callback
       end
 
   In this worker module, you can implement the functions `before_run/2`,
