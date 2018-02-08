@@ -24,18 +24,7 @@ defmodule Roger.Partition.Worker.Callback do
 
   defmacro __using__(_) do
     quote do
-      @behaviour unquote(__MODULE__)
-
-      def before_run(_partition, _job), do: nil
-      def after_run(_partition, _job, _result, _before_run_state), do: nil
-
-      def on_error(_partition, _job, _error, _before_run_state), do: nil
-      def on_cancel(_partition, _job), do: nil
-
-      def on_buried(_partition, _job, _error, _before_run_state), do: nil
-
-      defoverridable before_run: 2, after_run: 4, on_error: 4, on_cancel: 2
-
+      @behaviour Roger.Partition.Worker.Callback
     end
   end
 
@@ -52,7 +41,7 @@ defmodule Roger.Partition.Worker.Callback do
   @doc """
   Executed when a job has exited with an error
   """
-  @callback on_error(String.t, Roger.Job.t, any, any) :: any
+  @callback on_error(String.t, Roger.Job.t, any, any, any) :: any
 
   @doc """
   Executed when the job was cancelled
@@ -71,6 +60,7 @@ defmodule Roger.Partition.Worker.Callback do
   in a special queue called "buried". Upon placement in this queue,
   this callback gets executed.
   """
-  @callback on_buried(partition_id :: String.t, job :: Roger.Job.t, any, any) :: any
+  @callback on_buried(partition_id :: String.t, job :: Roger.Job.t, any, any, any) :: any
 
+  @optional_callbacks before_run: 2, after_run: 4, on_error: 5, on_cancel: 2, on_buried: 5
 end

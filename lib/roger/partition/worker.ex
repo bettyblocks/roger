@@ -132,7 +132,11 @@ defmodule Roger.Partition.Worker do
     if mod != nil do
       try do
         # We never want the callback to crash the worker process.
-        Kernel.apply(mod, callback, args)
+        if function_exported?(mod, callback, length(args)) do
+          Kernel.apply(mod, callback, args)
+        else
+          nil
+        end
       catch
         :exit=t, e ->
           Logger.error "Worker error in callback function #{mod}.#{callback}: #{t}:#{e}"
