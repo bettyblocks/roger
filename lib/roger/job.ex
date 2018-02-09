@@ -83,28 +83,11 @@ defmodule Roger.Job do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Roger.Job
-      @after_compile __MODULE__
-
-      @doc false
-      def queue_key(_args), do: nil
-
-      @doc false
-      def execution_key(_args), do: nil
 
       @doc false
       def queue_type(_args), do: :default
 
-      @doc false
-      def retryable?(), do: false
-
-      defoverridable queue_key: 1, execution_key: 1, queue_type: 1, retryable?: 0
-
-      def __after_compile__(env, _) do
-        if !Module.defines?(__MODULE__, {:perform, 1}) do
-          raise ArgumentError, "#{__MODULE__} must implement the perform/1 function"
-        end
-      end
-
+      defoverridable queue_type: 1
     end
   end
 
@@ -113,6 +96,8 @@ defmodule Roger.Job do
   @callback queue_type(any) :: atom
   @callback perform(any) :: any
   @callback retryable?() :: true | false
+
+  @optional_callbacks queue_key: 1, execution_key: 1, retryable?: 0
 
   @doc """
   Creates a new job based on a job module.
@@ -133,7 +118,13 @@ defmodule Roger.Job do
   def create(module, args \\ [], id \\ generate_job_id()) when is_atom(module) do
     keys =
       ~w(queue_key execution_key)a
-      |> Enum.map(fn(prop) -> {prop, Kernel.apply(module, prop, [args])} end)
+      |> Enum.map(fn(prop) ->
+        if function_exported?(module, prop, 1) do
+          {prop, Kernel.apply(module, prop, [args])}
+        else
+          {prop, nil}
+        end
+      end)
       |> Enum.into(%{})
 
     %__MODULE__{module: module, args: args, id: id}
@@ -214,7 +205,11 @@ defmodule Roger.Job do
   Given a job, return whether it's retryable or not.
   """
   def retryable?(%__MODULE__{} = job) do
-    job.module.retryable?()
+    if function_exported?(job.module, :retryable?, 0) do
+      job.module.retryable?()
+    else
+      false
+    end
   end
 
 end
