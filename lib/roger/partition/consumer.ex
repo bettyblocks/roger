@@ -166,7 +166,7 @@ defmodule Roger.Partition.Consumer do
 
   def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
     # Shut down the partition when a channel closes unexpectedly
-    Logger.debug "Terminating partition #{state.partition_id} due to connection error"
+    Logger.warn "Terminating partition #{state.partition_id} due to connection error"
     :ok = Roger.Partition.ContainingSupervisor.stop(state.partition_id)
     {:stop, :normal, state}
   end
