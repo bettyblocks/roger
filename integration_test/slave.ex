@@ -37,6 +37,7 @@ defmodule Roger.Integration.Slave do
 
 
   def handle_info(:timeout, state) do
+    Code.ensure_loaded(WorkerCallback)
     Application.put_env(:roger, :callbacks, WorkerCallback)
 
     {:ok, _} = Application.ensure_all_started(:roger)
