@@ -41,7 +41,7 @@ defmodule Roger.Job do
   @type t :: %__MODULE__{}
 
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count started_at queued_at)a}
-  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0, started_at: 0, queued_at: 0
+  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0, started_at: 0, queued_at: 0, max_execution_time: :infinity
 
   alias Roger.{Queue, Partition.Global, Job}
 
@@ -96,8 +96,9 @@ defmodule Roger.Job do
   @callback queue_type(any) :: atom
   @callback perform(any) :: any
   @callback retryable?() :: true | false
+  @callback max_execution_time() :: number
 
-  @optional_callbacks queue_key: 1, execution_key: 1, retryable?: 0
+  @optional_callbacks queue_key: 1, execution_key: 1, retryable?: 0, max_execution_time: 0
 
   @doc """
   Creates a new job based on a job module.
@@ -127,8 +128,15 @@ defmodule Roger.Job do
       end)
       |> Enum.into(%{})
 
+    max_execution_time = if function_exported?(module, :max_execution_time, 0) do
+      %{max_execution_time: apply(module, :max_execution_time, [])}
+    else
+      %{}
+    end
+
     %__MODULE__{module: module, args: args, id: id}
     |> Map.merge(keys)
+    |> Map.merge(max_execution_time)
     |> validate
   end
 

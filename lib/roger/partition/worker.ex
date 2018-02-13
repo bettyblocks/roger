@@ -39,7 +39,7 @@ defmodule Roger.Partition.Worker do
 
   defmodule State do
     @moduledoc false
-    defstruct partition_id: nil, meta: nil, raw_payload: nil, channel: nil
+    defstruct partition_id: nil, meta: nil, raw_payload: nil, channel: nil, worker_task_pid: nil, job: nil
   end
 
   def init([partition_id, channel, payload, meta]) do
@@ -51,6 +51,12 @@ defmodule Roger.Partition.Worker do
     {:ok, state, 0}
   end
 
+  def handle_info(:timeout, %{worker_task_pid: pid, job: job} = state) when is_pid(pid) do
+    Process.exit(pid, :kill)
+    handle_error(job, {:timeout, "Job stopped because of timeout"}, nil, state)
+    {:stop, :normal, state}
+  end
+
   def handle_info(:timeout, state) do
     case Job.decode(state.raw_payload) do
       {:ok, job} ->
@@ -58,6 +64,7 @@ defmodule Roger.Partition.Worker do
         if Global.cancelled?(state.partition_id, job.id, :remove) do
           callback(:on_cancel, [state.partition_id, job])
           job_done(job, :ack, state)
+          {:stop, :normal, state}
         else
 
           if job.execution_key != nil and Global.executing?(state.partition_id, job.execution_key, :add) do
@@ -65,43 +72,66 @@ defmodule Roger.Partition.Worker do
             :ok = put_execution_waiting(job, state)
             # then ack it.
             AMQP.Basic.ack(state.channel, state.meta.delivery_tag)
+            {:stop, :normal, state}
           else
             GProc.regp(name(job.id))
             GProc.regp({:roger_job_worker_meta, state.partition_id, job.id}, job)
-
-            before_run_state = callback(:before_run, [state.partition_id, job])
-            try do
-              result = Job.execute(job)
-              job_done(job, :ack, state)
-
-              callback(:after_run, [state.partition_id, job, result, before_run_state])
-            catch
-              t, e ->
-                #Logger.error "Execution error: #{t}:#{inspect e}"
-              cb = if Job.retryable?(job) do
-                case Retry.retry(state.channel, state.partition_id, job) do
-                  {:ok, :buried} -> :on_buried
-                  {:ok, _expiration} -> :on_error
-                end
-              else
-                :on_error
-              end
-
-              job_done(job, :ack, state)
-              callback(cb, [state.partition_id, job, {t, e}, System.stacktrace(), before_run_state])
-
-              GProc.unregp(name(job.id))
-              GProc.unregp({:roger_job_worker_meta, state.partition_id, job.id})
-
-            end
+            parent = self()
+            {pid, _ref} = spawn_monitor(fn () ->
+              execute_job(job, state, parent)
+              send(parent, :job_finished)
+            end)
+#            Process.send_after
+            {:noreply, %{state | worker_task_pid: pid, job: job}, job.max_execution_time}
           end
         end
       {:error, message} ->
         # Decode error
         Logger.debug "Job decoding error: #{inspect message} #{inspect state.raw_payload}"
         job_done(nil, :ack, state)
+        {:stop, :normal, state}
     end
+
+  end
+
+  def handle_info(:job_finished, state) do
     {:stop, :normal, state}
+  end
+
+  def handle_info(:job_errored, state) do
+    GProc.unregp(name(state.job.id))
+    GProc.unregp({:roger_job_worker_meta, state.partition_id, state.job.id})
+    {:stop, :normal, state}
+  end
+
+  defp execute_job(job, state, parent) do
+    before_run_state = callback(:before_run, [state.partition_id, job])
+    try do
+      result = Job.execute(job)
+
+      job_done(job, :ack, state)
+
+      callback(:after_run, [state.partition_id, job, result, before_run_state])
+    catch
+      type, exception ->
+        #Logger.error "Execution error: #{t}:#{inspect e}"
+        handle_error(job, {type, exception}, before_run_state, state)
+        send(parent, :job_errored)
+    end
+  end
+
+  defp handle_error(job, {type, exception}, before_run_state, state) do
+    cb = if Job.retryable?(job) do
+      case Retry.retry(state.channel, state.partition_id, job) do
+        {:ok, :buried} -> :on_buried
+        {:ok, _expiration} -> :on_error
+      end
+    else
+      :on_error
+    end
+
+    job_done(job, :ack, state)
+    callback(cb, [state.partition_id, job, {type, exception}, System.stacktrace(), before_run_state])
   end
 
   # Ran at the end of the job, either ack'ing or nack'ing the message.
