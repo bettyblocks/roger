@@ -236,7 +236,7 @@ defmodule Roger.System do
     if state.active do
       worker_name = Roger.Partition.Worker.name(job_id)
       for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
-        Process.exit(pid, :exit)
+        GenServer.call(pid, :cancel_job)
       end
     end
     :ok

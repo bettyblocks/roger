@@ -51,7 +51,7 @@ defmodule Roger.Partition.Worker do
     {:ok, state, 0}
   end
 
-  def handle_info(:timeout, %{worker_task_pid: pid, job: job} = state) when is_pid(pid) do
+  def handle_info(:handle_job_timeout, %{worker_task_pid: pid, job: job} = state) when is_pid(pid) do
     Process.exit(pid, :kill)
     handle_error(job, {:timeout, "Job stopped because of timeout"}, nil, state)
     {:stop, :normal, state}
@@ -81,8 +81,12 @@ defmodule Roger.Partition.Worker do
               execute_job(job, state, parent)
               send(parent, :job_finished)
             end)
-#            Process.send_after
-            {:noreply, %{state | worker_task_pid: pid, job: job}, job.max_execution_time}
+
+            if is_number(job.max_execution_time) do
+              Process.send_after(self(), :handle_job_timeout, job.max_execution_time)
+            end
+
+            {:noreply, %{state | worker_task_pid: pid, job: job}}
           end
         end
       {:error, message} ->
@@ -102,6 +106,16 @@ defmodule Roger.Partition.Worker do
     GProc.unregp(name(state.job.id))
     GProc.unregp({:roger_job_worker_meta, state.partition_id, state.job.id})
     {:stop, :normal, state}
+  end
+
+  def handle_info({:DOWN, _ref, :process, _child, reason}, state) do
+    handle_error(state.job, {:worker_crash, reason}, nil, state)
+    {:stop, :normal, state}
+  end
+
+  def handle_call(:cancel_job, _source, state) do
+    Process.exit(state.worker_task_pid, :kill)
+    {:reply, :ok, state, 0}
   end
 
   defp execute_job(job, state, parent) do
