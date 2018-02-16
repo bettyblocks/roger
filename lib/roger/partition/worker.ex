@@ -48,7 +48,14 @@ defmodule Roger.Partition.Worker do
       channel: channel,
       meta: meta,
       raw_payload: payload}
+    Process.flag(:trap_exit, true)
     {:ok, state, 0}
+  end
+
+  def terminate(_reason, state) do
+    if state.worker_task_pid do
+      Process.exit(state.worker_task_pid, :kill)
+    end
   end
 
   def handle_info(:handle_job_timeout, %{worker_task_pid: pid, job: job} = state) when is_pid(pid) do
