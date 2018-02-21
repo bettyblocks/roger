@@ -41,7 +41,7 @@ defmodule Roger.Partition.Worker.Callback do
   @doc """
   Executed when a job has exited with an error
   """
-  @callback on_error(String.t, Roger.Job.t, any, any, any) :: any
+  @callback on_error(String.t, Roger.Job.t, {atom, String.t}, any, any) :: any
 
   @doc """
   Executed when the job was cancelled

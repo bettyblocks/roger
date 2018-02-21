@@ -19,12 +19,12 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
   test "reconnect after enqueue job" do
     {:ok, job} = Job.create(MyJob, 1)
     Job.enqueue(job, @app)
-    :timer.sleep 50
+
+    :timer.sleep(10)
 
     restart_amqp_connection()
 
     assert_receive :reconnect_job_done, 10000
-
   end
 
 

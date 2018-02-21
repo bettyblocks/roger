@@ -41,7 +41,7 @@ defmodule Roger.Job do
   @type t :: %__MODULE__{}
 
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count started_at queued_at)a}
-  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0, started_at: 0, queued_at: 0
+  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0, started_at: 0, queued_at: 0, max_execution_time: :infinity
 
   alias Roger.{Queue, Partition.Global, Job}
 
@@ -83,28 +83,11 @@ defmodule Roger.Job do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Roger.Job
-      @after_compile __MODULE__
-
-      @doc false
-      def queue_key(_args), do: nil
-
-      @doc false
-      def execution_key(_args), do: nil
 
       @doc false
       def queue_type(_args), do: :default
 
-      @doc false
-      def retryable?(), do: false
-
-      defoverridable queue_key: 1, execution_key: 1, queue_type: 1, retryable?: 0
-
-      def __after_compile__(env, _) do
-        if !Module.defines?(__MODULE__, {:perform, 1}) do
-          raise ArgumentError, "#{__MODULE__} must implement the perform/1 function"
-        end
-      end
-
+      defoverridable queue_type: 1
     end
   end
 
@@ -113,6 +96,9 @@ defmodule Roger.Job do
   @callback queue_type(any) :: atom
   @callback perform(any) :: any
   @callback retryable?() :: true | false
+  @callback max_execution_time() :: number
+
+  @optional_callbacks queue_key: 1, execution_key: 1, retryable?: 0, max_execution_time: 0
 
   @doc """
   Creates a new job based on a job module.
@@ -133,11 +119,24 @@ defmodule Roger.Job do
   def create(module, args \\ [], id \\ generate_job_id()) when is_atom(module) do
     keys =
       ~w(queue_key execution_key)a
-      |> Enum.map(fn(prop) -> {prop, Kernel.apply(module, prop, [args])} end)
+      |> Enum.map(fn(prop) ->
+        if function_exported?(module, prop, 1) do
+          {prop, Kernel.apply(module, prop, [args])}
+        else
+          {prop, nil}
+        end
+      end)
       |> Enum.into(%{})
+
+    max_execution_time = if function_exported?(module, :max_execution_time, 0) do
+      %{max_execution_time: apply(module, :max_execution_time, [])}
+    else
+      %{}
+    end
 
     %__MODULE__{module: module, args: args, id: id}
     |> Map.merge(keys)
+    |> Map.merge(max_execution_time)
     |> validate
   end
 
@@ -189,7 +188,7 @@ defmodule Roger.Job do
   end
 
   defp validate(%__MODULE__{module: module} = job) do
-    case :code.ensure_loaded(module) do
+    case Code.ensure_loaded(module) do
       {:error, :nofile} ->
         {:error, "Unknown job module: #{module}"}
       {:module, ^module} ->
@@ -214,7 +213,11 @@ defmodule Roger.Job do
   Given a job, return whether it's retryable or not.
   """
   def retryable?(%__MODULE__{} = job) do
-    job.module.retryable?()
+    if function_exported?(job.module, :retryable?, 0) do
+      job.module.retryable?()
+    else
+      false
+    end
   end
 
 end
