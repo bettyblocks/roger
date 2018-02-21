@@ -96,7 +96,13 @@ defmodule Roger.Job do
   @callback queue_type(any) :: atom
   @callback perform(any) :: any
   @callback retryable?() :: true | false
-  @callback max_execution_time() :: number
+
+  @doc """
+  Ability to set max execution time of the job in seconds.
+  The default is :infinity which will allow the job unlimited time to finish.
+  Minimum value is 1 seconds.
+  """
+  @callback max_execution_time() :: integer() | :infinity
 
   @optional_callbacks queue_key: 1, execution_key: 1, retryable?: 0, max_execution_time: 0
 
@@ -129,7 +135,11 @@ defmodule Roger.Job do
       |> Enum.into(%{})
 
     max_execution_time = if function_exported?(module, :max_execution_time, 0) do
-      %{max_execution_time: apply(module, :max_execution_time, [])}
+      execution_time = case apply(module, :max_execution_time, []) do
+        0 -> 1
+        execution_time -> execution_time
+      end
+      %{max_execution_time: execution_time}
     else
       %{}
     end

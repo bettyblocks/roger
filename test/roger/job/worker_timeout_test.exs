@@ -21,17 +21,17 @@ defmodule Roger.Job.WorkerTimeoutTest do
       send(Roger.Job.WorkerTimeoutTest, :job_done)
     end
 
-    def max_execution_time(), do: 100
+    def max_execution_time(), do: 1
 
   end
 
   test "job should not finish when over timeout" do
     Application.put_env(:roger, :callbacks, OnErrorCallback)
-    {:ok, job} = Job.create(MyLongJob, [150])
+    {:ok, job} = Job.create(MyLongJob, [1100])
     :ok = Job.enqueue(job, @app)
 
     refute_receive :job_done
-    assert_receive {:job_error, :timeout}
+    assert_receive {:job_error, :timeout}, 1500
   end
 
   test "jobs still complete inside timeout" do

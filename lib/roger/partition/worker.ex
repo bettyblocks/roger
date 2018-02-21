@@ -175,7 +175,7 @@ defmodule Roger.Partition.Worker do
     end)
 
     if job.max_execution_time != :infinity do
-      Process.send_after(self(), :handle_job_timeout, job.max_execution_time)
+      Process.send_after(self(), :handle_job_timeout, job.max_execution_time * 1000)
     end
     pid
   end
