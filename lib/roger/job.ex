@@ -188,7 +188,7 @@ defmodule Roger.Job do
   end
 
   defp validate(%__MODULE__{module: module} = job) do
-    case :code.ensure_loaded(module) do
+    case Code.ensure_loaded(module) do
       {:error, :nofile} ->
         {:error, "Unknown job module: #{module}"}
       {:module, ^module} ->
