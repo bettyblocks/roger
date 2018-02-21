@@ -55,7 +55,7 @@ defmodule Roger.Partition.Worker do
   @doc """
   This will make sure the worker task is killed when the worker get's stopped
   """
-  @spec terminate(any, State.t())
+  @spec terminate(any(), State.t()) :: any()
   def terminate(_reason, state) do
     if state.worker_task_pid do
       Process.exit(state.worker_task_pid, :kill)
@@ -120,17 +120,21 @@ defmodule Roger.Partition.Worker do
   end
 
   @doc """
+  This handle a hard crash
+  """
+  @spec handle_info({:DOWN, reference(), :process, pid(), String.t()}, State.t()) :: {:stop, :normal, State.t()}
+  def handle_info({:DOWN, _ref, :process, _child, reason}, state) do
+    handle_error(state.job, {:worker_crash, reason}, nil, state)
+    {:stop, :normal, state}
+  end
+
+  @doc """
   This is called when job needs to be cancelled it kills running job and runs the timeout task to correctly finish the job.
   """
   @spec handle_call(:cancel_job, any(), State.t()) :: {:reply, :ok, State.t(), 0}
   def handle_call(:cancel_job, _source, state) do
     Process.exit(state.worker_task_pid, :kill)
     {:reply, :ok, state, 0}
-  end
-
-  def handle_info({:DOWN, _ref, :process, _child, reason}, state) do
-    handle_error(state.job, {:worker_crash, reason}, nil, state)
-    {:stop, :normal, state}
   end
 
   defp execute_job(job, state, parent) do
