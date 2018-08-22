@@ -6,7 +6,7 @@ elixir:
   - 1.6.6
   - 1.7.2
 otp_release:
-  - 20.2
+  - 20.3
 script: MIX_ENV=test mix compile --warnings-as-errors && MIX_ENV=test mix test && integration_test/run
 after_script:
   - mix deps.get --only docs
