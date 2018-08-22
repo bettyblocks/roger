@@ -18,7 +18,7 @@ defmodule Roger.Partition.InfoTest do
     use Job
 
     def perform(queue) do
-      :timer.sleep 200
+      :timer.sleep 300
       send(Roger.Partition.InfoTest, {:done, queue})
     end
   end
@@ -34,7 +34,7 @@ defmodule Roger.Partition.InfoTest do
 
     {:ok, job} = Job.create(SlowTestJob, 3)
     :ok = Job.enqueue(job, @app)
-    :timer.sleep 10
+    :timer.sleep 50
 
     q = NodeInfo.running_partitions[@app].default
 
