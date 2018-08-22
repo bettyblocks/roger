@@ -9,6 +9,10 @@ defmodule Roger.Partition.Consumer.RetryTest do
       send(Roger.Partition.Consumer.RetryTest, {:retry, job.retry_count})
     end
 
+    def on_buried(_, _, _, _, _) do
+      send(Roger.Partition.Consumer.RetryTest, {:retry, :buried})
+    end
+
   end
 
   defmodule Retryable do
@@ -23,14 +27,23 @@ defmodule Roger.Partition.Consumer.RetryTest do
 
   end
 
+  setup do
+    Application.put_env(:roger, :retry_levels, [1,1,1])
+  end
+
   test "retryable job" do
 
     {:ok, job} = Job.create(Retryable, 1)
     Job.enqueue(job, @app)
 
-    for n <- 0..5 do
-      assert_receive {:retry, ^n}, 500
+    for n <- 0..2 do
+      if n > 0 do
+        refute_receive {:retry, ^n}, 500
+      end
+      assert_receive {:retry, ^n}, 1500
     end
+
+    assert_receive {:retry, :buried}, 1500
   end
 
 end
