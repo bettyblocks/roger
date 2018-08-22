@@ -44,10 +44,10 @@ defmodule Roger.Mixfile do
       {:amqp, "~> 0.3 or ~> 1.0"},
       {:jsx, "~> 2.8"},
       {:singleton, "~> 1.0"},
-      {:gproc, "~> 0.6.1"},
-      {:poison, "~> 2.1 or ~> 3.0"},
+      {:gproc, "~> 0.6"},
+      {:poison, "~> 2.1 or ~> 3.0 or ~> 4.0"},
       {:ex_doc, "~> 0.12", only: :dev},
-      {:inch_ex, only: :docs}
+      {:inch_ex, ">= 0.0.0", only: :docs}
     ]
   end
 end
