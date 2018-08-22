@@ -29,6 +29,7 @@ defmodule Roger.Partition.Retry do
   alias Roger.{Queue, Job}
 
   @default_levels [1, 3, 5, 10, 20, 35, 60, 100, 200, 400, 1000, 1800]
+  @max_buried_queue_size Application.get_env(:roger, :max_buried_queue_size, 100)
 
   @doc """
   Given an AMQP channel and the partition, queues the given job for retry.
@@ -47,7 +48,7 @@ defmodule Roger.Partition.Retry do
   end
 
   defp setup_retry_queue(channel, partition, job) do
-    levels = Application.get_env(:roger, :retry_levels) || @default_levels
+    levels = Application.get_env(:roger, :retry_levels, @default_levels)
     queue_type = Job.queue_type(job)
 
     expiration = if job.retry_count < Enum.count(levels) do
@@ -60,8 +61,9 @@ defmodule Roger.Partition.Retry do
       {"x-dead-letter-exchange", ""},
       {"x-dead-letter-routing-key", Queue.make_name(partition, queue_type)},
     ]
+
     {queue_name, arguments} = if expiration == :buried do
-      {Queue.make_name(partition, queue_type, ".buried"), [{"x-max-length", 100}]}
+      {Queue.make_name(partition, queue_type, ".buried"), [{"x-max-length", @max_buried_queue_size}]}
     else
       {Queue.make_name(partition, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration * 1000 + 2000}]}
     end
