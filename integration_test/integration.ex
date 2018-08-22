@@ -80,7 +80,7 @@ defmodule Roger.Integration do
 
   defp create_config do
     Application.start(:mix)
-    {config, _} = Mix.Config.eval!("config/config.exs")
+    config = Mix.Config.read!("config/config.exs")
     for {app, kvs} <- config do
       for {k, v} <- kvs do
         Application.put_env(app, k, v)
