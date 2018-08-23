@@ -25,12 +25,18 @@ defmodule Roger.Partition.NodeInfoTest do
   end
 
   test "get the running jobs" do
-    :ok = Consumer.resume(@app, :default)
+    :ok = Consumer.pause(@app, :default)
+
+    :timer.sleep(50)
 
     {:ok, job} = Job.create(SlowTestJob, 1)
     :ok = Job.enqueue(job, @app)
-    :timer.sleep 50
 
+    :timer.sleep(50)
+
+    :ok = Consumer.resume(@app, :default)
+
+    :timer.sleep(50)
     info = NodeInfo.running_jobs
     # assert info[@app] == NodeInfo.running_jobs(@app)
 

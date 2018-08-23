@@ -115,7 +115,7 @@ defmodule Roger.Partition.Worker do
   @spec handle_info(:handle_job_timeout, State.t()) :: {:stop, :normal, State.t()}
   def handle_info(:handle_job_timeout, %{worker_task_pid: pid, job: job} = state) when is_pid(pid) do
     Process.exit(pid, :kill)
-    handle_error(job, {:timeout, "Job stopped because of timeout"}, nil, state)
+    handle_error(job, {:timeout, "Job stopped because of timeout"}, nil, state, nil)
     {:stop, :normal, state}
   end
 
@@ -124,7 +124,7 @@ defmodule Roger.Partition.Worker do
   """
   @spec handle_info({:DOWN, reference(), :process, pid(), String.t()}, State.t()) :: {:stop, :normal, State.t()}
   def handle_info({:DOWN, _ref, :process, _child, reason}, state) do
-    handle_error(state.job, {:worker_crash, reason}, nil, state)
+    handle_error(state.job, {:worker_crash, reason}, nil, state, nil)
     {:stop, :normal, state}
   end
 
@@ -147,12 +147,12 @@ defmodule Roger.Partition.Worker do
       callback(:after_run, [state.partition_id, job, result, before_run_state])
     catch
       type, exception ->
-        handle_error(job, {type, exception}, before_run_state, state)
+        handle_error(job, {type, exception}, before_run_state, state, System.stacktrace())
         send(parent, :job_errored)
     end
   end
 
-  defp handle_error(job, {type, exception}, before_run_state, state) do
+  defp handle_error(job, {type, exception}, before_run_state, state, stacktrace) do
     cb = with true <- Job.retryable?(job),
          {:ok, :buried} <- Retry.retry(state.channel, state.partition_id, job)
       do
@@ -162,7 +162,7 @@ defmodule Roger.Partition.Worker do
       end
 
     job_done(job, :ack, state)
-    callback(cb, [state.partition_id, job, {type, exception}, System.stacktrace(), before_run_state])
+    callback(cb, [state.partition_id, job, {type, exception}, stacktrace, before_run_state])
   end
 
   defp job_startup(job, state) do

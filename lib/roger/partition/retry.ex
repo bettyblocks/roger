@@ -29,41 +29,43 @@ defmodule Roger.Partition.Retry do
   alias Roger.{Queue, Job}
 
   @default_levels [1, 3, 5, 10, 20, 35, 60, 100, 200, 400, 1000, 1800]
-  @levels Application.get_env(:roger, :retry_levels) || @default_levels
+  @max_buried_queue_size Application.get_env(:roger, :max_buried_queue_size, 100)
 
   @doc """
   Given an AMQP channel and the partition, queues the given job for retry.
   """
   def retry(channel, partition, job) do
-
     {queue, expiration} = setup_retry_queue(channel, partition, job)
 
     payload = Job.encode(%Job{job | retry_count: job.retry_count + 1})
     opts_extra = case expiration do
                    :buried -> []
-                   _ -> [expiration: Integer.to_string(expiration)]
+                   _ -> [expiration: Integer.to_string(expiration * 1000)]
                  end
+
     AMQP.Basic.publish(channel, "", queue, payload, Job.publish_opts(job, partition) ++ opts_extra)
     {:ok, expiration}
   end
 
   defp setup_retry_queue(channel, partition, job) do
+    levels = Application.get_env(:roger, :retry_levels, @default_levels)
     queue_type = Job.queue_type(job)
 
-    expiration = if job.retry_count < Enum.count(@levels) do
-      :lists.nth(job.retry_count + 1, @levels)
+    expiration = if job.retry_count < Enum.count(levels) do
+      :lists.nth(job.retry_count + 1, levels)
     else
       :buried
     end
 
     arguments = [
       {"x-dead-letter-exchange", ""},
-      {"x-dead-letter-routing-key", Queue.make_name(partition, queue_type)}
+      {"x-dead-letter-routing-key", Queue.make_name(partition, queue_type)},
     ]
+
     {queue_name, arguments} = if expiration == :buried do
-      {Queue.make_name(partition, queue_type, ".buried"), arguments}
+      {Queue.make_name(partition, queue_type, ".buried"), [{"x-max-length", @max_buried_queue_size}]}
     else
-      {Queue.make_name(partition, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration + 2000}]}
+      {Queue.make_name(partition, queue_type, ".retry.#{expiration}"), arguments ++ [{"x-expires", expiration * 1000 + 2000}]}
     end
 
     {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, durable: true, arguments: arguments)
