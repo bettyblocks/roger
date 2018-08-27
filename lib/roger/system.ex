@@ -226,7 +226,7 @@ defmodule Roger.System do
   end
 
   defp reply_node_name(random) do
-    node_name() <> random <> "-reply"
+    node_name(random) <> "-reply"
   end
 
   defp dispatch_command({:ping, _args}, _state) do
