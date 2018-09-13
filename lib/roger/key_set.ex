@@ -113,6 +113,7 @@ defmodule Roger.KeySet do
   # server side
 
   def init([opts]) do
+    Process.flag(:trap_exit, true)
     {:ok, load_state(opts[:state])}
   end
 
