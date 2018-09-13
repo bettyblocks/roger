@@ -201,16 +201,14 @@ defmodule Roger.System do
       {:ok, channel} ->
         Process.monitor(channel.pid)
 
-        random = 6 |> :crypto.strong_rand_bytes() |> Base.url_encode64()
-
         # Fanout / pubsub setup
         :ok = Exchange.declare(channel, @system_exchange, :fanout)
-        {:ok, info} = Queue.declare(channel, node_name(random), exclusive: true)
+        {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
         Queue.bind(channel, info.queue, @system_exchange)
         {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
         # reply queue
-        {:ok, info} = Queue.declare(channel, reply_node_name(random), exclusive: true)
+        {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
         {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
         {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
@@ -221,12 +219,12 @@ defmodule Roger.System do
     end
   end
 
-  defp node_name(random) do
-    to_string(Node.self()) <> random
+  defp node_name do
+    to_string(Node.self())
   end
 
-  defp reply_node_name(random) do
-    node_name() <> random <> "-reply"
+  defp reply_node_name do
+    node_name() <> "-reply"
   end
 
   defp dispatch_command({:ping, _args}, _state) do
