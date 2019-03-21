@@ -91,6 +91,10 @@ Roger.Job.enqueue(job, "myapp")
 
 ## Advanced options
 
+### Use interconnected erlang node list
+
+config :roger, internal_node_connection: true
+
 ### Graceful shutdown
 
 For graceful shutdown with like phoenix you need to disable auto starting roger and start it in the supervisor tree.
