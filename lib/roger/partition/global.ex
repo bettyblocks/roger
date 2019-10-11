@@ -150,10 +150,17 @@ defmodule Roger.Partition.Global do
   @save_interval 1000
 
   def init([partition_id]) do
+    Process.flag(:trap_exit, true)
     Process.send_after(self(), :save, @save_interval)
     :ok = apply(@persister_module, :init, [partition_id])
     {:ok, load(partition_id)}
   end
+
+  def terminate(kind, state) when kind in [:normal, :shutdown] do
+    save(state)
+  end
+
+  def terminate(_, _), do: nil
 
   def handle_call({:cancel, job_id}, _from, state) do
     KeySet.add(state.cancel_set, job_id)
