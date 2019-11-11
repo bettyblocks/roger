@@ -22,7 +22,8 @@ defmodule Roger do
 
     children = [
       worker(Roger.AMQPClient, [amqp_config]),
-      worker(Roger.System, []),
+      Roger.System,
+      Roger.ApplySystem,
       supervisor(Roger.PartitionSupervisor, []),
       worker(Roger.Partition, []),
       Roger.ShutdownHandler.child_spec([])
