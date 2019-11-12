@@ -20,7 +20,6 @@ defmodule Roger.ApplySystem do
 
   require Logger
   alias Roger.System.Command
-  alias Roger.System.Reply
   alias Roger.System.State
 
   @doc false
