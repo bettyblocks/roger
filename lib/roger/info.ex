@@ -7,7 +7,7 @@ defmodule Roger.Info do
 
   """
 
-  alias Roger.{System, AMQPClient, Job}
+  alias Roger.{ApplySystem, AMQPClient, Job}
 
   @doc """
   Retrieve combined partition info on all running and waiting partitions, over the entire cluster.
@@ -79,7 +79,7 @@ defmodule Roger.Info do
 
 
   defp gather(call, args \\ []) do
-    {:ok, result} = System.call({:apply, Roger.NodeInfo, call}, args)
+    {:ok, result} = ApplySystem.call({:apply, Roger.NodeInfo, call}, args)
     result
   end
 

@@ -1,4 +1,4 @@
-defmodule Roger.System do
+defmodule Roger.ApplySystem do
   @moduledoc """
 
   Listener for system-wide events.
@@ -6,17 +6,22 @@ defmodule Roger.System do
   On the AMQP side, the systemchannel declares a fanout exchange
   called 'system' and adds a private queue to it, which it consumes.
 
+  This is the apply part of system mostly just to handle NodeInfo requests.
+  Split is done to reduce load of genserver.
+
   """
 
   use GenServer
   use AMQP
 
-  @system_exchange "system"
+  @system_exchange "apply-system"
   @command_content_type "roger/system-command"
   @reply_content_type "roger/system-reply"
 
   require Logger
   alias Roger.System.Command
+  alias Roger.System.Reply
+  alias Roger.System.State
 
   @doc false
   def start_link(_) do
@@ -37,99 +42,8 @@ defmodule Roger.System do
     GenServer.call(__MODULE__, {:cast, Command.new(command, args)})
   end
 
-  @doc """
-  Return whether the node is connected to the AMQP broker
-  """
-  def connected? do
-    GenServer.call(__MODULE__, :is_connected)
-  end
-
-  @doc """
-  Return whether the node is active or shutting down
-  """
-  def active?() do
-    GenServer.call(__MODULE__, :is_active)
-  end
-
-  @doc """
-  Set node to inactive so it can no longer start new partitions
-  """
-  def set_inactive() do
-    GenServer.call(__MODULE__, :set_inactive)
-  end
-
-  @doc """
-  Unsubscribe from all queues - ie. stop listening for jobs
-  """
-  def unsubscribe_all() do
-    GenServer.call(__MODULE__, :unsubscribe_all)
-  end
-
-  ###
-
-  defmodule Reply do
-    @moduledoc false
-    defstruct from: nil, replies: [], waiting: nil
-    def new(from, nodes) do
-      %__MODULE__{from: from, waiting: nodes}
-    end
-    def done?(%__MODULE__{waiting: []}), do: true
-    def done?(%__MODULE__{}), do: false
-
-    def add_reply(struct, node, reply) do
-      %{struct | replies: [{node, reply} | struct.replies],
-        waiting: struct.waiting -- [node]}
-    end
-  end
-
-  defmodule State do
-    @moduledoc false
-    defstruct channel: nil, reply_queue: nil, replies: %{}, active: true
-    def add_waiting_reply(state, id, from, nodes) do
-      %{state | replies: Map.put(state.replies, id, Reply.new(from, nodes))}
-    end
-
-    def check_node_reply(state, id, node, reply) do
-      if state.replies[id] != nil do
-        reply = Reply.add_reply(state.replies[id], node, reply)
-        if Reply.done?(reply) do
-          GenServer.reply(reply.from, {:ok, reply.replies})
-          %{state | replies: Map.delete(state.replies, id)}
-        else
-          # not done yet
-          %{state | replies: Map.put(state.replies, id, reply)}
-        end
-      else
-        Logger.error "#{node} Unknown reply to #{id}"
-        state
-      end
-    end
-  end
-
-
   def init([]) do
     {:ok, %State{}, 0}
-  end
-
-  def handle_call(:is_connected, _from, state) do
-    {:reply, state.channel != nil, state}
-  end
-
-  def handle_call(:is_active, _from, state) do
-    {:reply, state.active, state}
-  end
-
-  def handle_call(:set_inactive, _from, state) do
-    {:reply, :ok, %{state | active: false}}
-  end
-
-  def handle_call(:unsubscribe_all, _from, state) do
-    unless state.active do
-      Enum.each(Roger.NodeInfo.running_partition_ids(), fn(id) ->
-        Roger.Partition.safe_stop(id)
-      end)
-    end
-    {:reply, :ok, state}
   end
 
   def handle_call(_, _, %State{channel: nil} = state) do
@@ -220,38 +134,15 @@ defmodule Roger.System do
   end
 
   defp node_name do
-    to_string(Node.self())
+    "apply-" <> to_string(Node.self())
   end
 
   defp reply_node_name do
     node_name() <> "-reply"
   end
 
-  defp dispatch_command({:ping, _args}, _state) do
-    :pong
-  end
-
-  defp dispatch_command({:cancel, [job_id: job_id]}, state) do
-    # Cancel any running jobs
-    if state.active do
-      worker_name = Roger.Partition.Worker.name(job_id)
-      for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
-        GenServer.call(pid, :cancel_job)
-      end
-    end
-    :ok
-  end
-
-  defp dispatch_command({:queue_pause, [queue: queue, partition_id: partition_id]}, state) do
-    if state.active do
-      Roger.Partition.Consumer.pause(partition_id, queue)
-    end
-  end
-
-  defp dispatch_command({:queue_resume, [queue: queue, partition_id: partition_id]}, state) do
-    if state.active do
-      Roger.Partition.Consumer.resume(partition_id, queue)
-    end
+  defp dispatch_command({{:apply, mod, fun}, args}, _state) do
+    Kernel.apply(mod, fun, args)
   end
 
   defp dispatch_command({command, args}, _state) do
