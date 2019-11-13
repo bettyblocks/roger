@@ -67,7 +67,8 @@ defmodule Roger.ApplySystem do
       correlation_id: id,
       reply_to: state.reply_queue]
     :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
-    nodes = [node() | :erlang.nodes()]
+    filtered_nodes = Enum.filter(:erlang.nodes(), &!String.contains?(Atom.to_string(&1), "_maint_"))
+    nodes = [node() | filtered_nodes]
     {:noreply, state |> State.add_waiting_reply(id, from, nodes)}
   end
 
