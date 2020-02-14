@@ -201,6 +201,8 @@ defmodule Roger.Job do
     case Code.ensure_loaded(module) do
       {:error, :nofile} ->
         {:error, "Unknown job module: #{module}"}
+      {:error, :embedded} ->
+        {:error, "Module not loaded correctly: #{module}"}
       {:module, ^module} ->
         functions = module.__info__(:functions)
         case Enum.member?(functions, {:perform, 1}) do
