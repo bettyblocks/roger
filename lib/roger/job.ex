@@ -202,6 +202,7 @@ defmodule Roger.Job do
       {:error, :nofile} ->
         {:error, "Unknown job module: #{module}"}
       {:error, :embedded} ->
+        Logger.error("Module not available: #{module}")
         {:error, "Module not loaded correctly: #{module}"}
       {:module, ^module} ->
         functions = module.__info__(:functions)
