@@ -52,8 +52,11 @@ defmodule Roger.ApplySystem do
   # Send the command to all nodes; don't wait for response
   def handle_call({:cast, command}, _from, state) do
     payload = Command.encode(command)
+
     opts = [
-      content_type: @command_content_type]
+      content_type: @command_content_type
+    ]
+
     :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
     {:reply, :ok, state}
   end
@@ -62,22 +65,17 @@ defmodule Roger.ApplySystem do
   def handle_call({:call, command}, from, state) do
     payload = Command.encode(command)
     id = generate_id()
+
     opts = [
       content_type: @command_content_type,
       correlation_id: id,
-      reply_to: state.reply_queue]
+      reply_to: state.reply_queue
+    ]
+
     :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
-    filtered_nodes = Enum.filter(:erlang.nodes(), &!String.contains?(Atom.to_string(&1), "_maint_"))
+    filtered_nodes = Enum.filter(:erlang.nodes(), &(!String.contains?(Atom.to_string(&1), "_maint_")))
     nodes = [node() | filtered_nodes]
     {:noreply, state |> State.add_waiting_reply(id, from, nodes)}
-  end
-
-  def handle_info(:check_started_partitions, state) do
-    Process.send_after(self(), :check_started_partitions, 1000)
-    if state.channel && state.active do
-      :ok = GenServer.cast(Roger.Partition, :check_partitions)
-    end
-    {:noreply, state}
   end
 
   def handle_info({:basic_consume_ok, _meta}, state) do
@@ -86,17 +84,22 @@ defmodule Roger.ApplySystem do
 
   def handle_info({:basic_deliver, payload, meta = %{content_type: @command_content_type}}, state) do
     command = Command.decode(payload)
-    reply = try do
-              dispatch_command(command, state)
-            catch
-              e ->
-                Logger.warn "#{inspect e}"
-            end
+
+    reply =
+      try do
+        dispatch_command(command, state)
+      catch
+        e ->
+          Logger.warn("#{inspect(e)}")
+      end
+
     payload = :erlang.term_to_binary({node(), reply})
+
     if meta.correlation_id != :undefined do
       opts = [content_type: @reply_content_type, correlation_id: meta.correlation_id]
       :ok = Basic.publish(state.channel, "", meta.reply_to, payload, opts)
     end
+
     {:noreply, state}
   end
 
@@ -106,14 +109,16 @@ defmodule Roger.ApplySystem do
   end
 
   def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
-    Process.send_after(self(), :timeout, 1000) # try again if the AMQP client is back up
+    # try again if the AMQP client is back up
+    Process.send_after(self(), :timeout, 1000)
     {:noreply, %State{state | channel: nil}}
   end
 
   def handle_info(:timeout, state) do
-    case Roger.AMQPClient.open_channel do
+    case Roger.AMQPClient.open_channel() do
       {:ok, channel} ->
         Process.monitor(channel.pid)
+        Process.link(channel.pid)
 
         # Fanout / pubsub setup
         :ok = Exchange.declare(channel, @system_exchange, :fanout)
@@ -128,7 +133,8 @@ defmodule Roger.ApplySystem do
         {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
 
       {:error, :disconnected} ->
-        Process.send_after(self(), :timeout, 1000) # try again if the AMQP client is back up
+        # try again if the AMQP client is back up
+        Process.send_after(self(), :timeout, 1000)
         {:noreply, %State{state | channel: nil, reply_queue: nil}}
     end
   end
@@ -146,12 +152,11 @@ defmodule Roger.ApplySystem do
   end
 
   defp dispatch_command({command, args}, _state) do
-    Logger.warn "Received unknown command: #{inspect command} #{inspect args}"
+    Logger.warn("Received unknown command: #{inspect(command)} #{inspect(args)}")
     {:error, :unknown_command}
   end
 
   defp generate_id do
     :crypto.strong_rand_bytes(10) |> Base.hex_encode32(case: :lower)
   end
-
 end
