@@ -3,10 +3,10 @@ defmodule Roger.Integration do
 
   require Logger
 
-  @hostname elem(:inet.gethostname, 1)
+  @hostname elem(:inet.gethostname(), 1)
   @master :"a@#{@hostname}"
   @slaves ~w(a b c d)a
-  @slave_nodes (@slaves |> Enum.map(&(String.to_atom("#{&1}@#{@hostname}"))))
+  @slave_nodes @slaves |> Enum.map(&String.to_atom("#{&1}@#{@hostname}"))
 
   @job_count 200
 
@@ -15,38 +15,45 @@ defmodule Roger.Integration do
 
     @slaves |> Enum.map(&start_node/1)
 
-    Logger.info "Nodes running: #{inspect Node.list}"
+    Logger.info("Nodes running: #{inspect(Node.list())}")
 
     {:ok, _} = Application.ensure_all_started(:roger)
+    IO.puts("all started")
+
     wait_ready(@slave_nodes)
+    IO.puts("nodes ready")
 
     for _ <- 1..@job_count do
       enqueue()
     end
 
-    :timer.sleep 1000
+    :timer.sleep(1000)
     :rpc.abcast(@slave_nodes, Roger.Integration.Slave, :done)
     result = receive_all(@slave_nodes, %{})
 
     # assert that all nodes have executed some jobs
-    executed = result
-    |> Enum.filter(fn({_, v}) -> v > 0 end)
-    |> Enum.into(%{})
+    executed =
+      result
+      |> Enum.filter(fn {_, v} -> v > 0 end)
+      |> Enum.into(%{})
 
     @slave_nodes = Map.keys(executed)
 
     # Assert that all jobs have executed
-    @job_count = result |> Map.values |> Enum.sum
+    @job_count = result |> Map.values() |> Enum.sum()
 
-    Logger.info "Job execution result: #{inspect result}"
-    Logger.info "Test OK."
-
+    Logger.info("Job execution result: #{inspect(result)}")
+    Logger.info("Test OK.")
   end
 
   defp wait_ready([]), do: :ok
+
   defp wait_ready(nodes) do
+    IO.puts("wait ready")
+
     receive do
       {:ready, node} ->
+        IO.inspect(node, label: "ready recieved")
         wait_ready(nodes -- [node])
     end
   end
@@ -54,58 +61,67 @@ defmodule Roger.Integration do
   defp receive_all([], result) do
     result
   end
+
   defp receive_all(nodes, result) do
     receive do
       {:log, node, msg} ->
-        Logger.info "[#{node}] - #{msg}"
+        Logger.info("[#{node}] - #{msg}")
         receive_all(nodes, result)
+
       {:done, node, count} ->
         receive_all(nodes -- [node], Map.put(result, node, count))
     end
   end
 
-
   defp start_node(node) do
-    paths = for p <- :code.get_path, do: ['-pa ', p, ' ']
-    |> List.flatten
+    paths =
+      for p <- :code.get_path(),
+          do:
+            ['-pa ', p, ' ']
+            |> List.flatten()
 
-    {:ok, _} = :ct_slave.start(node,
-      kill_if_fail: true,
-      monitor_master: true,
-      init_timeout: 10,
-      startup_functions: [{Roger.Integration.Slave, :start_link, [self()]}],
-      erl_flags: paths ++ ' -config /tmp/sys.config'
-    )
+    IO.inspect(node, label: "node")
+
+    {:ok, _} =
+      :ct_slave.start(node,
+        kill_if_fail: false,
+        monitor_master: false,
+        monitor: true,
+        init_timeout: 100,
+        startup_functions: [{Roger.Integration.Slave, :start_link, [self()]}],
+        erl_flags: paths ++ ' -config /tmp/sys.config'
+      )
+      |> IO.inspect(label: "node start")
   end
 
   defp create_config do
     Application.start(:mix)
     config = Mix.Config.read!("config/config.exs")
+
     for {app, kvs} <- config do
       for {k, v} <- kvs do
         Application.put_env(app, k, v)
       end
     end
-    sys_config_string = :io_lib.format('~p.~n', [config]) |> List.to_string
+
+    sys_config_string = :io_lib.format('~p.~n', [config]) |> List.to_string() |> IO.inspect(label: "config")
     File.write("/tmp/sys.config", sys_config_string)
   end
-
-
 
   def start_single do
     create_config()
 
     {:ok, _} = Application.ensure_all_started(:roger)
+
     if node() == @master do
       Roger.Partition.start("integration", [])
     else
-      Roger.Partition.start("integration", [default: 100])
+      Roger.Partition.start("integration", default: 100)
     end
 
     :pong = Node.ping(@master)
-    IO.puts "Node.list: #{inspect Node.list}"
+    IO.puts("Node.list: #{inspect(Node.list())}")
   end
-
 
   def enqueue_many(n \\ 300_000) do
     for _ <- 1..n, do: enqueue()
@@ -116,5 +132,4 @@ defmodule Roger.Integration do
     Roger.Job.enqueue(job, "integration")
     job
   end
-
 end

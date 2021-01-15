@@ -23,9 +23,9 @@ defmodule Roger.Queue do
   """
   @spec setup_channel(queue :: t) :: {atom, t}
   def setup_channel(%Queue{} = queue) do
-    {:ok, channel} = Roger.AMQPClient.open_channel()
+    {:ok, channel} = Roger.AMQPClient.open_channel(self())
     :ok = AMQP.Basic.qos(channel, prefetch_count: queue.max_workers)
-    {:ok, %Queue{queue | channel: channel}}
+    {:ok, %Queue{queue | channel: channel}} |> IO.inspect(label: "open queue #{inspect(self())}")
   end
 
   @doc """
@@ -34,7 +34,6 @@ defmodule Roger.Queue do
   def make_name(partition_id, type, postfix \\ "") do
     "#{partition_id}-#{type}#{postfix}"
   end
-
 
   @doc """
   Flushes all messages on the given queue.
@@ -48,5 +47,4 @@ defmodule Roger.Queue do
     :ok = AMQP.Channel.close(channel)
     result
   end
-
 end

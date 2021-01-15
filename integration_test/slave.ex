@@ -1,6 +1,8 @@
 defmodule Roger.Integration.Slave do
   @moduledoc false
 
+  require Logger
+
   defmodule WorkerCallback do
     @moduledoc false
     use Roger.Partition.Worker.Callback
@@ -18,11 +20,12 @@ defmodule Roger.Integration.Slave do
   end
 
   def start_link(master) do
-    GenServer.start_link(__MODULE__, [master], name: __MODULE__)
+    GenServer.start_link(__MODULE__, [master]) |> IO.inspect(label: "genserver start")
   end
 
   def init([master]) do
-    {:ok, %State{master: master}, 0}
+    Logger.error("init #{inspect(master)} starting")
+    {:ok, %State{master: master}, {:continue, :setup}}
   end
 
   def handle_cast({:job_done, _module}, state) do
@@ -35,17 +38,21 @@ defmodule Roger.Integration.Slave do
     {:noreply, state}
   end
 
-
-  def handle_info(:timeout, state) do
+  def handle_continue(:setup, state) do
     Application.put_env(:roger, :callbacks, WorkerCallback)
-
-    {:ok, _} = Application.ensure_all_started(:roger)
-    {:ok, _pid} = Roger.Partition.start("integration", [default: 10])
+    Logger.error("timeout")
+    result = Application.ensure_all_started(:roger)
+    Logger.error("#{inspect(result)} ensure started")
+    {:ok, _} = result |> IO.inspect(label: "starting stuff")
+    Logger.error("ensuring started")
+    {:ok, _pid} = Roger.Partition.start("integration", default: 10) |> IO.inspect(label: "starting partition")
+    Logger.error("booting complete")
 
     spawn(fn ->
-      :timer.sleep 1000
+      :timer.sleep(1000)
       log(state.master, "ready")
-      send(state.master, {:ready, node()})
+      IO.inspect({:ready, node()}, label: "sending message")
+      send(state.master, {:ready, node()}) |> IO.inspect(label: "message")
     end)
 
     {:noreply, state}
@@ -58,5 +65,4 @@ defmodule Roger.Integration.Slave do
   defp done(state) do
     send(state.master, {:done, node(), state.done_count})
   end
-
 end

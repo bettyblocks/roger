@@ -20,10 +20,11 @@ defmodule Roger.AMQPClient do
   @doc """
   Open a channel to RabbitMQ and return it. This also links the calling process to the connection.
   """
-  def open_channel() do
-    case GenServer.call(__MODULE__, :open_channel) do
+  def open_channel(pid \\ nil) do
+    case GenServer.call(__MODULE__, {:open_channel, pid}) do
       {:ok, channel} ->
         {:ok, channel}
+
       {:error, _} = e ->
         e
     end
@@ -69,9 +70,14 @@ defmodule Roger.AMQPClient do
     {:reply, reply, state}
   end
 
-  def handle_call(:open_channel, _from, state) do
-    reply = amqp_response(Channel.open(state.connection))
-    {:reply, reply, state}
+  def handle_call({:open_channel, pid}, _from, state) do
+    channel_open_response =
+      case pid do
+        pid when is_pid(pid) -> Channel.open(state.connection, {AMQP.DirectConsumer, pid})
+        _ -> Channel.open(state.connection)
+      end
+
+    {:reply, amqp_response(channel_open_response), state}
   end
 
   def handle_call(:get_connection_pid, _from, state) do
@@ -85,8 +91,9 @@ defmodule Roger.AMQPClient do
 
   # Handles when the AMQP connection goes down
   def handle_info({:DOWN, _, :process, pid, _}, %{connection: %{pid: pid}} = state) do
-    Logger.debug "AMQP connection lost"
-    Process.send_after(self(), :timeout, 1000) # reconnect
+    Logger.debug("AMQP connection lost")
+    # reconnect
+    Process.send_after(self(), :timeout, 1000)
     {:noreply, %{state | connection: nil, client_channel: nil}}
   end
 
@@ -98,21 +105,21 @@ defmodule Roger.AMQPClient do
     case Connection.open(state.config) do
       {:ok, connection} ->
         {:ok, client_channel} = Channel.open(connection)
-        Logger.debug "AMQP client connected."
+        Logger.debug("AMQP client connected.")
 
-        state=%State{state | connection: connection, client_channel: client_channel}
+        state = %State{state | connection: connection, client_channel: client_channel}
         Process.monitor(connection.pid)
         state
+
       {:error, _} = e ->
-        Logger.debug "AMQP error: #{inspect e}"
-        Process.send_after(self(), :timeout, 5000) # reconnect
+        Logger.debug("AMQP error: #{inspect(e)}")
+        # reconnect
+        Process.send_after(self(), :timeout, 5000)
         %State{state | connection: nil, client_channel: nil}
     end
   end
 
   defp amqp_response(:ok), do: :ok
   defp amqp_response({:ok, _} = r), do: r
-  defp amqp_response(:closing), do: {:error, :disconnected}
   defp amqp_response({:error, _} = e), do: e
-
 end

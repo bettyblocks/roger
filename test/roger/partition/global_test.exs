@@ -13,9 +13,10 @@ defmodule Roger.Partition.GlobalTest do
     :ok = Global.queue_pause(@app, :expression)
 
     {:ok, queues} = Global.queue_get_paused(@app)
-    Enum.each queues, fn(q) ->
+
+    Enum.each(queues, fn q ->
       :ok = Global.queue_resume(@app, q)
-    end
+    end)
 
     assert {:ok, %MapSet{}} == Global.queue_get_paused(@app)
   end
@@ -24,5 +25,4 @@ defmodule Roger.Partition.GlobalTest do
     assert {:error, :not_started} == Global.cancel_job("foo", "bar")
     assert {:error, :not_started} == Global.queue_get_paused("foo")
   end
-
 end
