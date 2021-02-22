@@ -19,6 +19,13 @@ jobs:
       with:
         elixir-version: '1.10.3' # Define the elixir version [required]
         otp-version: '22.3' # Define the OTP version [required]
+    - name: Set up rabbitmq
+      uses: getong/rabbitmq-action@v1.2
+      with:
+        rabbitmq version: '3.8.2-management-alpine'
+        host port: 5672
+        rabbitmq user: 'guest'
+        rabbitmq password: 'guest'
     - name: Restore dependencies cache
       uses: actions/cache@v2
       with:
