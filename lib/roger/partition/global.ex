@@ -59,7 +59,7 @@ defmodule Roger.Partition.Global do
   Check whether a given job id has been marked cancelled
   """
   @spec cancelled?(partition_id :: String.t(), job_id :: String.t()) :: boolean
-  @spec cancelled?(partition_id :: String.t(), job_id :: String.t(), remove :: :remove) :: boolean
+  @spec cancelled?(partition_id :: String.t(), job_id :: String.t(), remove :: :remove | nil) :: boolean
   def cancelled?(partition_id, job_id, remove \\ nil) do
     partition_call(partition_id, {:is_cancelled, job_id, remove})
   end
@@ -68,7 +68,7 @@ defmodule Roger.Partition.Global do
   Check whether a given queue key has been marked enqueued
   """
   @spec queued?(partition_id :: String.t(), queue_key :: String.t()) :: boolean
-  @spec queued?(partition_id :: String.t(), queue_key :: String.t(), add :: :add) :: boolean
+  @spec queued?(partition_id :: String.t(), queue_key :: String.t(), add :: :add | nil) :: boolean
   def queued?(partition_id, queue_key, add \\ nil) do
     partition_call(partition_id, {:is_queued, queue_key, add})
   end
@@ -85,7 +85,7 @@ defmodule Roger.Partition.Global do
   Check whether a given execution key has been set
   """
   @spec executing?(partition_id :: String.t(), execution_key :: String.t()) :: boolean
-  @spec executing?(partition_id :: String.t(), execution_key :: String.t(), add :: :add) :: boolean
+  @spec executing?(partition_id :: String.t(), execution_key :: String.t(), add :: :add | nil) :: boolean
   def executing?(partition_id, execution_key, add \\ nil) do
     partition_call(partition_id, {:is_executing, execution_key, add})
   end
