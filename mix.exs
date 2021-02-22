@@ -46,7 +46,7 @@ defmodule Roger.Mixfile do
   defp deps do
     [
       {:amqp, "~> 2.0"},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6"},
       {:poison, "~> 2.1 or ~> 3.0 or ~> 4.0"},
