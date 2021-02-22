@@ -21,8 +21,8 @@ defmodule Roger do
     children = [
       Roger.System,
       Roger.ApplySystem,
-      supervisor(Roger.PartitionSupervisor, []),
-      worker(Roger.Partition, []),
+      Roger.PartitionSupervisor,
+      Roger.Partition,
       Roger.ShutdownHandler.child_spec([])
     ]
 

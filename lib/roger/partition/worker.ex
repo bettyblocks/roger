@@ -25,10 +25,10 @@ defmodule Roger.Partition.Worker do
   # after how long the wait queue for execution_key-type jobs expires
   @execution_waiting_expiry 1800 * 1000
 
-  use GenServer
+  use GenServer, restart: :transient
 
-  def start_link(partition_id, channel, payload, meta) do
-    GenServer.start_link(__MODULE__, [partition_id, channel, payload, meta])
+  def start_link(worker_input) do
+    GenServer.start_link(__MODULE__, worker_input)
   end
 
   def name(job_id) do
@@ -155,7 +155,7 @@ defmodule Roger.Partition.Worker do
       callback(:after_run, [state.partition_id, job, result, before_run_state])
     catch
       type, exception ->
-        handle_error(job, {type, exception}, before_run_state, state, System.stacktrace())
+        handle_error(job, {type, exception}, before_run_state, state, __STACKTRACE__)
         send(parent, :job_errored)
     end
   end

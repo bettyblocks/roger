@@ -28,7 +28,7 @@ defmodule Roger.Partition do
   @type queue_def :: {id :: String.t(), max_workers :: non_neg_integer}
 
   @doc false
-  def start_link do
+  def start_link([]) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
