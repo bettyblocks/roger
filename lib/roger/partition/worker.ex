@@ -39,6 +39,15 @@ defmodule Roger.Partition.Worker do
 
   defmodule State do
     @moduledoc false
+    @type t :: %__MODULE__{
+            partition_id: String.t(),
+            meta: map,
+            raw_payload: binary,
+            channel: AMQP.Channel.t(),
+            worker_task_pid: pid,
+            job: Job.t()
+          }
+
     defstruct partition_id: nil, meta: nil, raw_payload: nil, channel: nil, worker_task_pid: nil, job: nil
   end
 
