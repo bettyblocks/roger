@@ -18,10 +18,7 @@ defmodule Roger do
   def start_link(_opts \\ []) do
     import Supervisor.Spec, warn: false
 
-    amqp_config = Application.get_env(:roger, :amqp)
-
     children = [
-      worker(Roger.AMQPClient, [amqp_config]),
       Roger.System,
       Roger.ApplySystem,
       supervisor(Roger.PartitionSupervisor, []),

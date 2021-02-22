@@ -33,7 +33,7 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
   # end
 
   defp restart_amqp_connection do
-    pid = GenServer.call(Roger.AMQPClient, :get_connection_pid)
+  {:ok, %{pid: pid}} = AMQP.Application.get_connection(:roger_conn)
     Process.exit(pid, :kill)
   end
 end

@@ -16,7 +16,6 @@ defmodule Roger.Partition.QueueTest do
 
   test "purge queued jobs" do
     :ok = Consumer.pause(@app, :default)
-
     {:ok, job} = Job.create(TestJob, 2)
     :ok = Job.enqueue(job, @app)
 

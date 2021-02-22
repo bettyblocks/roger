@@ -115,6 +115,11 @@ defmodule Roger.Partition do
     end
   end
 
+  def handle_info({:stop_partition, partition_id}, state) do
+    :ok = Roger.Partition.ContainingSupervisor.stop(partition_id)
+    {:noreply, state}
+  end
+
   def handle_info(:timeout, state) do
     Process.send_after(Process.whereis(Roger.System), :check_started_partitions, 1000)
     apps = get_predefined_apps()
@@ -186,6 +191,7 @@ defmodule Roger.Partition do
   defp stop_partition(id, state) do
     case Roger.GProc.whereis({:app_supervisor, id}) do
       pid when is_pid(pid) ->
+        :ok = Consumer.force_shutdown(id)
         :ok = Singleton.stop_child(Global, [id])
         :ok = Roger.PartitionSupervisor.stop_child(pid)
         {:ok, %State{state | monitored: Map.delete(state.monitored, pid)}}

@@ -42,7 +42,7 @@ defmodule Roger.Mixfile do
   # Dependencies
   defp deps do
     [
-      {:amqp, "~> 0.3 or ~> 1.0"},
+      {:amqp, "~> 2.0"},
       {:jsx, "~> 2.8"},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6"},

@@ -225,7 +225,9 @@ defmodule Roger.Partition.Worker do
     meta = state.meta
 
     if meta != nil do
-      Kernel.apply(AMQP.Basic, ack_or_nack, [state.channel, meta.delivery_tag])
+      if Process.alive?(state.channel.pid) do
+        Kernel.apply(AMQP.Basic, ack_or_nack, [state.channel, meta.delivery_tag])
+      end
     end
   end
 
