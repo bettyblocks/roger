@@ -14,7 +14,7 @@ defmodule Roger.Mixfile do
      homepage_url: "https://github.com/bettyblocks/roger",
      deps: deps(),
      docs: [extras: ["docs/overview.md", "docs/configuration.md"]]
-    ]
+  ]
   end
 
   defp elixirc_paths(:prod), do: ["lib"]
@@ -41,7 +41,7 @@ defmodule Roger.Mixfile do
   # Dependencies
   defp deps do
     [
-      {:amqp, "~> 0.3 or ~> 1.0"},
+      {:amqp, "~> 2.0"},
       {:jsx, "~> 2.8"},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6"},

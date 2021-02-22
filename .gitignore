@@ -19,3 +19,5 @@ erl_crash.dump
 config/dev.exs
 /docs/all.json
 .DS_Store
+/.idea
+*.iml

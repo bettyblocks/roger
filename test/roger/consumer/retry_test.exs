@@ -57,7 +57,7 @@ defmodule Roger.Partition.Consumer.RetryTest do
 
 
 
-    {:ok, channel} = Roger.AMQPClient.open_channel()
+    {:ok, channel} = AMQP.Application.get_channel(:send_channel)
     {:ok, stats} = AMQP.Queue.status(channel, queue_name)
 
     assert stats.message_count == 100

@@ -70,21 +70,23 @@ defmodule Roger.System do
   defmodule Reply do
     @moduledoc false
     defstruct from: nil, replies: [], waiting: nil
+
     def new(from, nodes) do
       %__MODULE__{from: from, waiting: nodes}
     end
+
     def done?(%__MODULE__{waiting: []}), do: true
     def done?(%__MODULE__{}), do: false
 
     def add_reply(struct, node, reply) do
-      %{struct | replies: [{node, reply} | struct.replies],
-        waiting: struct.waiting -- [node]}
+      %{struct | replies: [{node, reply} | struct.replies], waiting: struct.waiting -- [node]}
     end
   end
 
   defmodule State do
     @moduledoc false
     defstruct channel: nil, reply_queue: nil, replies: %{}, active: true
+
     def add_waiting_reply(state, id, from, nodes) do
       %{state | replies: Map.put(state.replies, id, Reply.new(from, nodes))}
     end
@@ -92,6 +94,7 @@ defmodule Roger.System do
     def check_node_reply(state, id, node, reply) do
       if state.replies[id] != nil do
         reply = Reply.add_reply(state.replies[id], node, reply)
+
         if Reply.done?(reply) do
           GenServer.reply(reply.from, {:ok, reply.replies})
           %{state | replies: Map.delete(state.replies, id)}
@@ -100,14 +103,14 @@ defmodule Roger.System do
           %{state | replies: Map.put(state.replies, id, reply)}
         end
       else
-        Logger.error "#{node} Unknown reply to #{id}"
+        Logger.error("#{node} Unknown reply to #{id}")
         state
       end
     end
   end
 
-
   def init([]) do
+    Process.flag(:trap_exit, true)
     {:ok, %State{}, 0}
   end
 
@@ -125,10 +128,11 @@ defmodule Roger.System do
 
   def handle_call(:unsubscribe_all, _from, state) do
     unless state.active do
-      Enum.each(Roger.NodeInfo.running_partition_ids(), fn(id) ->
+      Enum.each(Roger.NodeInfo.running_partition_ids(), fn id ->
         Roger.Partition.safe_stop(id)
       end)
     end
+
     {:reply, :ok, state}
   end
 
@@ -139,8 +143,11 @@ defmodule Roger.System do
   # Send the command to all nodes; don't wait for response
   def handle_call({:cast, command}, _from, state) do
     payload = Command.encode(command)
+
     opts = [
-      content_type: @command_content_type]
+      content_type: @command_content_type
+    ]
+
     :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
     {:reply, :ok, state}
   end
@@ -149,21 +156,26 @@ defmodule Roger.System do
   def handle_call({:call, command}, from, state) do
     payload = Command.encode(command)
     id = generate_id()
+
     opts = [
       content_type: @command_content_type,
       correlation_id: id,
-      reply_to: state.reply_queue]
+      reply_to: state.reply_queue
+    ]
+
     :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
-    filtered_nodes = Enum.filter(:erlang.nodes(), &!String.contains?(Atom.to_string(&1), "_maint_"))
+    filtered_nodes = Enum.filter(:erlang.nodes(), &(!String.contains?(Atom.to_string(&1), "_maint_")))
     nodes = [node() | filtered_nodes]
     {:noreply, state |> State.add_waiting_reply(id, from, nodes)}
   end
 
   def handle_info(:check_started_partitions, state) do
     Process.send_after(self(), :check_started_partitions, 1000)
+
     if state.channel && state.active do
       :ok = GenServer.cast(Roger.Partition, :check_partitions)
     end
+
     {:noreply, state}
   end
 
@@ -173,17 +185,22 @@ defmodule Roger.System do
 
   def handle_info({:basic_deliver, payload, meta = %{content_type: @command_content_type}}, state) do
     command = Command.decode(payload)
-    reply = try do
-              dispatch_command(command, state)
-            catch
-              e ->
-                Logger.warn "#{inspect e}"
-            end
+
+    reply =
+      try do
+        dispatch_command(command, state)
+      catch
+        e ->
+          Logger.warn("#{inspect(e)}")
+      end
+
     payload = :erlang.term_to_binary({node(), reply})
+
     if meta.correlation_id != :undefined do
       opts = [content_type: @reply_content_type, correlation_id: meta.correlation_id]
       :ok = Basic.publish(state.channel, "", meta.reply_to, payload, opts)
     end
+
     {:noreply, state}
   end
 
@@ -193,32 +210,43 @@ defmodule Roger.System do
   end
 
   def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
-    Process.send_after(self(), :timeout, 1000) # try again if the AMQP client is back up
+    # try again if the AMQP client is back up
+    Process.send_after(self(), :timeout, 1000)
     {:noreply, %State{state | channel: nil}}
   end
 
   def handle_info(:timeout, state) do
-    case Roger.AMQPClient.open_channel do
-      {:ok, channel} ->
-        Process.monitor(channel.pid)
+    with {:ok, amqp_conn} <- AMQP.Application.get_connection(:roger_conn),
+         {:ok, channel} <- AMQP.Channel.open(amqp_conn, {AMQP.DirectConsumer, self()}) do
+      Process.monitor(channel.pid)
+      # Fanout / pubsub setup
+      :ok = Exchange.declare(channel, @system_exchange, :fanout)
+      {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
+      Queue.bind(channel, info.queue, @system_exchange)
+      {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
-        # Fanout / pubsub setup
-        :ok = Exchange.declare(channel, @system_exchange, :fanout)
-        {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
-        Queue.bind(channel, info.queue, @system_exchange)
-        {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
+      # reply queue
+      {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
+      {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
-        # reply queue
-        {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
-        {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
+      Process.send_after(self(), :check_started_partitions, 1000)
 
-        {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
-
-      {:error, :disconnected} ->
-        Process.send_after(self(), :timeout, 1000) # try again if the AMQP client is back up
+      {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
+    else
+      {:error, :not_connected} ->
+        # try again if the AMQP client is back up
+        Process.send_after(self(), :timeout, 1000)
         {:noreply, %State{state | channel: nil, reply_queue: nil}}
     end
   end
+
+  def terminate(reason, state) when reason in [:shutdown, :normal] do
+    if Process.alive?(state.channel.pid) do
+      AMQP.Channel.close(state.channel)
+    end
+  end
+
+  def terminate(_reason, _state), do: :ok
 
   defp node_name do
     to_string(Node.self())
@@ -236,10 +264,12 @@ defmodule Roger.System do
     # Cancel any running jobs
     if state.active do
       worker_name = Roger.Partition.Worker.name(job_id)
+
       for {pid, _value} <- Roger.GProc.find_properties(worker_name) do
         GenServer.call(pid, :cancel_job)
       end
     end
+
     :ok
   end
 
@@ -256,12 +286,11 @@ defmodule Roger.System do
   end
 
   defp dispatch_command({command, args}, _state) do
-    Logger.warn "Received unknown command: #{inspect command} #{inspect args}"
+    Logger.warn("Received unknown command: #{inspect(command)} #{inspect(args)}")
     {:error, :unknown_command}
   end
 
   defp generate_id do
     :crypto.strong_rand_bytes(10) |> Base.hex_encode32(case: :lower)
   end
-
 end

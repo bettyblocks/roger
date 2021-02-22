@@ -3,11 +3,11 @@ defmodule Roger.Queue do
   Functions related to queues.
   """
 
-  alias Roger.{Queue, AMQPClient}
+  alias Roger.Queue
 
   @type t :: %__MODULE__{}
 
-  defstruct type: nil, max_workers: nil, consumer_tag: nil, channel: nil, confirmed: false
+  defstruct type: nil, max_workers: nil, consumer_tag: nil, channel: nil, confirmed: false, channel_ref: nil
 
   def define({type, max_workers}) do
     define(type, max_workers)
@@ -23,9 +23,12 @@ defmodule Roger.Queue do
   """
   @spec setup_channel(queue :: t) :: {atom, t}
   def setup_channel(%Queue{} = queue) do
-    {:ok, channel} = Roger.AMQPClient.open_channel()
-    :ok = AMQP.Basic.qos(channel, prefetch_count: queue.max_workers)
-    {:ok, %Queue{queue | channel: channel}}
+    with {:ok, amqp_conn} <- AMQP.Application.get_connection(:roger_conn),
+         {:ok, channel} <- AMQP.Channel.open(amqp_conn, {AMQP.DirectConsumer, self()}) do
+      ref = Process.monitor(channel.pid)
+      :ok = AMQP.Basic.qos(channel, prefetch_count: queue.max_workers)
+      {:ok, %Queue{queue | channel: channel, channel_ref: ref}}
+    end
   end
 
   @doc """
@@ -35,18 +38,14 @@ defmodule Roger.Queue do
     "#{partition_id}-#{type}#{postfix}"
   end
 
-
   @doc """
   Flushes all messages on the given queue.
   """
   def purge(partition_id, queue_type) do
-    {:ok, channel} = AMQPClient.open_channel()
-
+    {:ok, channel} = AMQP.Application.get_channel(:send_channel)
     queue = make_name(partition_id, queue_type)
     result = AMQP.Queue.purge(channel, queue)
 
-    :ok = AMQP.Channel.close(channel)
     result
   end
-
 end

@@ -50,7 +50,7 @@ defmodule Roger.Partition.Global do
   When a job is currently executing, the process of a running job will
   be killed.
   """
-  @spec cancel_job(partition_id :: String.t, job_id :: String.t) :: :ok
+  @spec cancel_job(partition_id :: String.t(), job_id :: String.t()) :: :ok
   def cancel_job(partition_id, job_id) do
     partition_call(partition_id, {:cancel, job_id})
   end
@@ -58,8 +58,8 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given job id has been marked cancelled
   """
-  @spec cancelled?(partition_id :: String.t, job_id :: String.t) :: boolean
-  @spec cancelled?(partition_id :: String.t, job_id :: String.t, remove :: :remove) :: boolean
+  @spec cancelled?(partition_id :: String.t(), job_id :: String.t()) :: boolean
+  @spec cancelled?(partition_id :: String.t(), job_id :: String.t(), remove :: :remove) :: boolean
   def cancelled?(partition_id, job_id, remove \\ nil) do
     partition_call(partition_id, {:is_cancelled, job_id, remove})
   end
@@ -67,8 +67,8 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given queue key has been marked enqueued
   """
-  @spec queued?(partition_id :: String.t, queue_key :: String.t) :: boolean
-  @spec queued?(partition_id :: String.t, queue_key :: String.t, add :: :add) :: boolean
+  @spec queued?(partition_id :: String.t(), queue_key :: String.t()) :: boolean
+  @spec queued?(partition_id :: String.t(), queue_key :: String.t(), add :: :add) :: boolean
   def queued?(partition_id, queue_key, add \\ nil) do
     partition_call(partition_id, {:is_queued, queue_key, add})
   end
@@ -76,7 +76,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Remove a given queue key
   """
-  @spec remove_queued(partition_id :: String.t, queue_key :: String.t) :: :ok
+  @spec remove_queued(partition_id :: String.t(), queue_key :: String.t()) :: :ok
   def remove_queued(partition_id, queue_key) do
     partition_call(partition_id, {:remove_queued, queue_key})
   end
@@ -84,8 +84,8 @@ defmodule Roger.Partition.Global do
   @doc """
   Check whether a given execution key has been set
   """
-  @spec executing?(partition_id :: String.t, execution_key :: String.t) :: boolean
-  @spec executing?(partition_id :: String.t, execution_key :: String.t, add :: :add) :: boolean
+  @spec executing?(partition_id :: String.t(), execution_key :: String.t()) :: boolean
+  @spec executing?(partition_id :: String.t(), execution_key :: String.t(), add :: :add) :: boolean
   def executing?(partition_id, execution_key, add \\ nil) do
     partition_call(partition_id, {:is_executing, execution_key, add})
   end
@@ -93,7 +93,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Remove the given execution key
   """
-  @spec remove_executed(partition_id :: String.t, execution_key :: String.t) :: :ok
+  @spec remove_executed(partition_id :: String.t(), execution_key :: String.t()) :: :ok
   def remove_executed(partition_id, execution_key) do
     partition_call(partition_id, {:remove_executed, execution_key})
   end
@@ -101,7 +101,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Cluster-wide pausing of the given queue in the given partition_id.
   """
-  @spec queue_pause(partition_id :: String.t, queue :: any) :: :ok
+  @spec queue_pause(partition_id :: String.t(), queue :: any) :: :ok
   def queue_pause(partition_id, queue) do
     partition_call(partition_id, {:queue_pause, queue})
   end
@@ -109,7 +109,7 @@ defmodule Roger.Partition.Global do
   @doc """
   Cluster-wide pausing of the given queue in the given partition_id.
   """
-  @spec queue_resume(partition_id :: String.t, queue :: any) :: :ok
+  @spec queue_resume(partition_id :: String.t(), queue :: any) :: :ok
   def queue_resume(partition_id, queue) do
     partition_call(partition_id, {:queue_resume, queue})
   end
@@ -117,13 +117,14 @@ defmodule Roger.Partition.Global do
   @doc """
   Get the set of paused queues for the given partition_id.
   """
-  @spec queue_get_paused(partition_id :: String.t) :: {:ok, MapSet.t}
+  @spec queue_get_paused(partition_id :: String.t()) :: {:ok, MapSet.t()}
   def queue_get_paused(partition_id) do
     partition_call(partition_id, :queue_get_paused)
   end
 
   @doc false
-  @spec partition_call(partition_id :: String.t, request :: any) :: :ok | true | false | {:ok, any} | {:error, :not_started}
+  @spec partition_call(partition_id :: String.t(), request :: any) ::
+          :ok | true | false | {:ok, any} | {:error, :not_started}
   defp partition_call(partition_id, request) do
     try do
       case GenServer.call(global_name(partition_id), request) do
@@ -168,6 +169,7 @@ defmodule Roger.Partition.Global do
 
   def handle_call({:is_cancelled, job_id, remove}, _from, state) do
     reply = KeySet.contains?(state.cancel_set, job_id)
+
     if reply and remove == :remove do
       KeySet.remove(state.cancel_set, job_id)
       {:reply, reply, State.set_dirty(state)}
@@ -178,6 +180,7 @@ defmodule Roger.Partition.Global do
 
   def handle_call({:is_queued, queue_key, add}, _from, state) do
     reply = KeySet.contains?(state.queue_set, queue_key)
+
     if !reply and add == :add do
       KeySet.add(state.queue_set, queue_key)
       {:reply, reply, State.set_dirty(state)}
@@ -193,6 +196,7 @@ defmodule Roger.Partition.Global do
 
   def handle_call({:is_executing, execute_key, add}, _from, state) do
     reply = KeySet.contains?(state.execute_set, execute_key)
+
     if !reply and add == :add do
       KeySet.add(state.execute_set, execute_key)
       {:reply, reply, State.set_dirty(state)}
@@ -234,6 +238,7 @@ defmodule Roger.Partition.Global do
       {:ok, data} ->
         state = State.deserialize(data)
         %State{state | partition_id: partition_id}
+
       {:error, _} ->
         State.new(partition_id)
     end
@@ -242,13 +247,13 @@ defmodule Roger.Partition.Global do
   defp save(%State{dirty: false} = state) do
     state
   end
+
   defp save(state) do
     apply(persister_module(), :store, [state.partition_id, State.serialize(state)])
     %State{state | dirty: false}
   end
-  
+
   defp persister_module do
     Application.get_env(:roger, :persister) || Roger.Partition.Global.StatePersister.Stub
   end
-
 end
