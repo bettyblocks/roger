@@ -7,7 +7,7 @@ defmodule Roger.Info do
 
   """
 
-  alias Roger.{ApplySystem, AMQPClient, Job}
+  alias Roger.{ApplySystem, Job}
 
   @doc """
   Retrieve combined partition info on all running and waiting partitions, over the entire cluster.
