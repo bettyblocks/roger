@@ -95,17 +95,13 @@ defmodule Roger.Partition.Worker do
     end
   end
 
-  @doc """
-  When job is finished it sends a message to the GenServer to finish off the worker task.
-  """
+  #  When job is finished it sends a message to the GenServer to finish off the worker task.
   @spec handle_info(:job_finished, State.t()) :: {:stop, :normal, State.t()}
   def handle_info(:job_finished, state) do
     {:stop, :normal, state}
   end
 
-  @doc """
-  When job has errors the async job task sends a message to this worker to correctly unregister and shutdown the worker.
-  """
+  #  When job has errors the async job task sends a message to this worker to correctly unregister and shutdown the worker.
   @spec handle_info(:job_errored, State.t()) :: {:stop, :normal, State.t()}
   def handle_info(:job_errored, state) do
     state.job.id
@@ -116,9 +112,7 @@ defmodule Roger.Partition.Worker do
     {:stop, :normal, state}
   end
 
-  @doc """
-  If a timeout is set on the job and the job exceeds the timeout this method is called and correctly shuts down the job.
-  """
+  #  If a timeout is set on the job and the job exceeds the timeout this method is called and correctly shuts down the job.
   @spec handle_info(:handle_job_timeout, State.t()) :: {:stop, :normal, State.t()}
   def handle_info(:handle_job_timeout, %{worker_task_pid: pid, job: job} = state) when is_pid(pid) do
     Process.exit(pid, :kill)
@@ -126,18 +120,14 @@ defmodule Roger.Partition.Worker do
     {:stop, :normal, state}
   end
 
-  @doc """
-  This handle a hard crash
-  """
+  #  This handle a hard crash
   @spec handle_info({:DOWN, reference(), :process, pid(), String.t()}, State.t()) :: {:stop, :normal, State.t()}
   def handle_info({:DOWN, _ref, :process, _child, reason}, state) do
     handle_error(state.job, {:worker_crash, reason}, nil, state, nil)
     {:stop, :normal, state}
   end
 
-  @doc """
-  This is called when job needs to be cancelled it kills running job and runs the timeout task to correctly finish the job.
-  """
+  #  This is called when job needs to be cancelled it kills running job and runs the timeout task to correctly finish the job.
   @spec handle_call(:cancel_job, any(), State.t()) :: {:reply, :ok, State.t(), 0}
   def handle_call(:cancel_job, _source, state) do
     Process.exit(state.worker_task_pid, :kill)

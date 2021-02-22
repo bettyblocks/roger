@@ -202,14 +202,14 @@ defmodule Roger.Partition.Consumer do
     end
   end
 
-  def handle_info({:DOWN, _ref, :process, _pid, info}, state) do
+  def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
     # Shut down the partition when a channel closes unexpectedly
     Logger.debug("Terminating partition #{state.partition_id} due to connection error")
     send(Roger.Partition, {:stop_partition, state.partition_id})
     {:stop, :normal, state}
   end
 
-  def handle_info({:EXIT, _, reason}, state) do
+  def handle_info({:EXIT, _, _reason}, state) do
     {:noreply, state}
   end
 
@@ -350,7 +350,7 @@ defmodule Roger.Partition.Consumer do
     }
   end
 
-  def terminate(reason, state) do
+  def terminate(_reason, state) do
     Enum.each(state.queues, fn %{channel: channel, channel_ref: channel_ref} ->
       if Process.alive?(channel.pid) do
         Process.demonitor(channel_ref)

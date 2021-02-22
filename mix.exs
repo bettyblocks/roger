@@ -13,6 +13,9 @@ defmodule Roger.Mixfile do
       package: package(),
       source_url: "https://github.com/bettyblocks/roger",
       homepage_url: "https://github.com/bettyblocks/roger",
+      dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ],
       deps: deps(),
       docs: [extras: ["docs/overview.md", "docs/configuration.md"]]
     ]
@@ -43,6 +46,7 @@ defmodule Roger.Mixfile do
   defp deps do
     [
       {:amqp, "~> 2.0"},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6"},
       {:poison, "~> 2.1 or ~> 3.0 or ~> 4.0"},
