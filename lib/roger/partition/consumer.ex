@@ -12,7 +12,7 @@ defmodule Roger.Partition.Consumer do
   require Logger
   alias Roger.{Queue, GProc, Partition.WorkerSupervisor, Partition.Global}
 
-  use GenServer
+  use GenServer, restart: :permanent
 
   def start_link(partition_id) do
     GenServer.start_link(__MODULE__, [partition_id], name: GProc.via(name(partition_id)))
