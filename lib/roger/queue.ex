@@ -23,7 +23,9 @@ defmodule Roger.Queue do
   """
   @spec setup_channel(queue :: t) :: {atom, t}
   def setup_channel(%Queue{} = queue) do
-    with {:ok, amqp_conn} <- AMQP.Application.get_connection(:roger_conn),
+    connection_name = Application.get_env(:roger, :connection_name)
+
+    with {:ok, amqp_conn} <- AMQP.Application.get_connection(connection_name),
          {:ok, channel} <- AMQP.Channel.open(amqp_conn, {AMQP.DirectConsumer, self()}) do
       ref = Process.monitor(channel.pid)
       :ok = AMQP.Basic.qos(channel, prefetch_count: queue.max_workers)
@@ -42,7 +44,8 @@ defmodule Roger.Queue do
   Flushes all messages on the given queue.
   """
   def purge(partition_id, queue_type) do
-    {:ok, channel} = AMQP.Application.get_channel(:send_channel)
+    channel_name = Application.get_env(:roger, :channel_name)
+    {:ok, channel} = AMQP.Application.get_channel(channel_name)
     queue = make_name(partition_id, queue_type)
     result = AMQP.Queue.purge(channel, queue)
 

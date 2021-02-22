@@ -51,7 +51,9 @@ defmodule Roger.Info do
   requeues the message using a nack.
   """
   def queued_jobs(partition_id, queue_type, count \\ 100) do
-    with {:ok, amqp_conn} <- AMQP.Application.get_connection(:roger_conn),
+    connection_name = Application.get_env(:roger, :connection_name)
+
+    with {:ok, amqp_conn} <- AMQP.Application.get_connection(connection_name),
          {:ok, channel} <- AMQP.Channel.open(amqp_conn) do
       queue = Roger.Queue.make_name(partition_id, queue_type)
       result = get_queue_messages(channel, queue, count)

@@ -3,13 +3,20 @@ use Mix.Config
 config :amqp,
   connections: [
     roger_conn: [
-      host: "localhost",
-      port: 5672
+      host: "127.0.0.1",
+      port: 5672,
+      virtual_host: "/vhost",
+      username: "user",
+      password: "password"
     ]
   ],
   channels: [
     send_channel: [connection: :roger_conn]
   ]
+
+config :roger,
+  connection_name: :roger_conn,
+  channel_name: :send_channel
 
 # Print only warnings and errors during test
 config :logger, level: :warn

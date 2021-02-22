@@ -27,7 +27,7 @@ Roger is a multi-tenant, high performance job processing system for Elixir.
 
 ### 1. Check requirements
 
-- Elixir 1.5.1 or greater
+- Elixir 1.9.0 or greater
 - RabbitMQ 3.6.0 or greater
 
 ### 2. Install Roger
@@ -36,28 +36,39 @@ Edit `mix.exs` and add `roger` to your list of dependencies and applications:
 
 ```elixir
 def deps do
-  [{:roger, "~> 1.2"}]
+  [{:roger, "~> 3.0"}]
 end
 ```
 
 Then run `mix deps.get`.
 
-### 3. Basic configuration Roger
-
-Configure hosts and default queues:
-
+### 3. Basic configuration amqp
 ```elixir
-config :roger,
-  amqp: [
-    host: "localhost",
-    port: 5672
+config :amqp,
+  connections: [
+    roger_conn: [
+      host: "localhost",
+      port: 5672
+    ]
+  ],
+  channels: [
+    send_channel: [connection: :roger_conn]
   ]
-
-config :roger, :partitions,
-  example: [default: 10, other: 2]
 ```
 
-### 4. Define Roger job
+### 4. Basic configuration Roger
+
+Configure connection and channel name of amqp.
+Also able to set some default queues.
+
+```elixir
+config :roger, :partitions,
+  example: [default: 10, other: 2],
+  connection_name: :roger_conn,
+  channel_name: :send_channel
+```
+
+### 5. Define Roger job
 
 Use `Roger.Job` module in your job module and define `perform/1` that takes a map as an argument.
 
@@ -79,7 +90,7 @@ def retryable(), do: true
 ```
 
 
-### 5. Enqueueing Roger job
+### 6. Enqueueing Roger job
 
 Then enqueue a job
 

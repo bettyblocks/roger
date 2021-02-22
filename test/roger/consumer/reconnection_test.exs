@@ -33,7 +33,8 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
   # end
 
   defp restart_amqp_connection do
-  {:ok, %{pid: pid}} = AMQP.Application.get_connection(:roger_conn)
+    connection_name = Application.get_env(:roger, :connection_name)
+    {:ok, %{pid: pid}} = AMQP.Application.get_connection(connection_name)
     Process.exit(pid, :kill)
   end
 end

@@ -11,4 +11,7 @@ config :amqp,
     send_channel: [connection: :roger_conn]
   ]
 
-config :roger, :partitions, example: [default: 10, other: 2]
+config :roger,
+  partitions: [example: [default: 10, other: 2]],
+  connection_name: :roger_conn,
+  channel_name: :send_channel

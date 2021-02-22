@@ -126,7 +126,9 @@ defmodule Roger.ApplySystem do
   end
 
   def handle_info(:timeout, state) do
-    with {:ok, amqp_conn} <- AMQP.Application.get_connection(:roger_conn),
+    connection_name = Application.get_env(:roger, :connection_name)
+
+    with {:ok, amqp_conn} <- AMQP.Application.get_connection(connection_name),
          {:ok, channel} <- AMQP.Channel.open(amqp_conn, {AMQP.DirectConsumer, self()}) do
       Process.monitor(channel.pid)
       # Fanout / pubsub setup

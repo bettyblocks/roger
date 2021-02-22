@@ -90,7 +90,8 @@ defmodule Roger.Partition.Consumer do
     # queues = state.queues |> Enum.map(fn(q) -> %{q | channel: nil} end)
     #    require IEx
     #    IEx.pry()
-    {:ok, channel} = AMQP.Application.get_channel(:send_channel)
+    channel_name = Application.get_env(:roger, :channel_name)
+    {:ok, channel} = AMQP.Application.get_channel(channel_name)
 
     reply =
       state.queues
