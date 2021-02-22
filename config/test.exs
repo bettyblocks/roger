@@ -5,9 +5,8 @@ config :amqp,
     roger_conn: [
       host: "127.0.0.1",
       port: 5672,
-      virtual_host: "/vhost",
-      username: "user",
-      password: "password"
+      username: "guest",
+      password: "guest"
     ]
   ],
   channels: [
