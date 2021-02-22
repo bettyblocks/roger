@@ -1,5 +1,0 @@
-#!/bin/bash
-export MIX_ENV=test
-
-mix compile
-exec elixir --sname master -pa '_build/test/lib/*/ebin' -e Roger.Integration.start
