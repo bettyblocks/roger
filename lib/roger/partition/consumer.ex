@@ -27,7 +27,19 @@ defmodule Roger.Partition.Consumer do
   end
 
   def reconfigure(partition_id, queues) do
-    GenServer.call(GProc.via(name(partition_id)), {:reconfigure, queues})
+    if is_alive?(partition_id) do
+      GenServer.call(GProc.via(name(partition_id)), {:reconfigure, queues})
+    else
+      :ok
+    end
+  end
+
+  def force_shutdown(partition_id) do
+    if is_alive?(partition_id) do
+      GenServer.call(GProc.via(name(partition_id)), :force_shutdown)
+    else
+      :ok
+    end
   end
 
   def pause(partition_id, queue) do
@@ -68,6 +80,7 @@ defmodule Roger.Partition.Consumer do
   end
 
   def init([partition_id]) do
+    Process.flag(:trap_exit, true)
     {:ok, paused} = Global.queue_get_paused(partition_id)
     {:ok, %State{partition_id: partition_id, paused: paused}}
   end
@@ -75,7 +88,9 @@ defmodule Roger.Partition.Consumer do
   def handle_call(:get_queues, _from, state) do
     # strip channel from the queues
     # queues = state.queues |> Enum.map(fn(q) -> %{q | channel: nil} end)
-    {:ok, channel} = Roger.AMQPClient.open_channel()
+    #    require IEx
+    #    IEx.pry()
+    {:ok, channel} = AMQP.Application.get_channel(:send_channel)
 
     reply =
       state.queues
@@ -94,8 +109,19 @@ defmodule Roger.Partition.Consumer do
       end)
       |> Enum.into(%{})
 
-    AMQP.Channel.close(channel)
     {:reply, reply, state}
+  end
+
+  def handle_call(:force_shutdown, _from, state) do
+    Enum.each(state.queues, fn %{channel: channel, channel_ref: channel_ref} ->
+      Process.demonitor(channel_ref)
+
+      if Process.alive?(channel.pid) do
+        AMQP.Channel.close(channel)
+      end
+    end)
+
+    {:reply, :ok, %State{}}
   end
 
   def handle_call({:reconfigure, queues}, _from, state) do
@@ -139,7 +165,9 @@ defmodule Roger.Partition.Consumer do
 
   def handle_info({:basic_cancel_ok, %{consumer_tag: consumer_tag}}, state) do
     if Map.has_key?(state.closing, consumer_tag) do
-      :ok = AMQP.Channel.close(state.closing[consumer_tag])
+      closing_channel = state.closing[consumer_tag]
+      Process.demonitor(closing_channel.channel_ref)
+      :ok = AMQP.Channel.close(closing_channel.channel)
       {:noreply, %{state | closing: Map.delete(state.closing, consumer_tag)}}
     else
       if Map.has_key?(state.pausing, consumer_tag) do
@@ -174,11 +202,15 @@ defmodule Roger.Partition.Consumer do
     end
   end
 
-  def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
+  def handle_info({:DOWN, _ref, :process, _pid, info}, state) do
     # Shut down the partition when a channel closes unexpectedly
     Logger.debug("Terminating partition #{state.partition_id} due to connection error")
-    :ok = Roger.Partition.ContainingSupervisor.stop(state.partition_id)
+    send(Roger.Partition, {:stop_partition, state.partition_id})
     {:stop, :normal, state}
+  end
+
+  def handle_info({:EXIT, _, reason}, state) do
+    {:noreply, state}
   end
 
   ## Internal functions
@@ -199,9 +231,12 @@ defmodule Roger.Partition.Consumer do
       |> Enum.map(fn q ->
         if q.consumer_tag != nil do
           {:ok, _} = AMQP.Basic.cancel(q.channel, q.consumer_tag)
+        else
+          Process.demonitor(q.channel_ref)
+          AMQP.Channel.close(q.channel)
         end
 
-        {q.consumer_tag, q.channel}
+        {q.consumer_tag, %{channel: q.channel, channel_ref: q.channel_ref}}
       end)
       |> Enum.into(%{})
 
@@ -242,7 +277,6 @@ defmodule Roger.Partition.Consumer do
       |> pick.(new_queues)
       |> Enum.map(fn q ->
         {:ok, q} = Queue.setup_channel(q)
-        Process.monitor(q.channel.pid)
 
         if !MapSet.member?(state.paused, q.type) and q.max_workers > 0 do
           consume(q, state)
@@ -314,5 +348,14 @@ defmodule Roger.Partition.Consumer do
       | consumer_tag: consumer_tag,
         confirmed: false
     }
+  end
+
+  def terminate(reason, state) do
+    Enum.each(state.queues, fn %{channel: channel, channel_ref: channel_ref} ->
+      if Process.alive?(channel.pid) do
+        Process.demonitor(channel_ref)
+        AMQP.Channel.close(channel)
+      end
+    end)
   end
 end
