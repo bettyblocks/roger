@@ -54,6 +54,7 @@ defmodule Roger.Partition.Consumer.RetryTest do
       assert_receive {:retry, :buried}, 1500
     end)
 
+    Process.sleep(50)
     queue_name = Queue.make_name("test", "default", ".buried")
 
     channel_name = Application.get_env(:roger, :channel_name)
