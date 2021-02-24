@@ -6,20 +6,20 @@ defmodule Roger.Partition.NodeInfoTest do
   alias Roger.Partition.Consumer
 
   setup do
-    :timer.sleep 1000
+    :timer.sleep(1000)
   end
 
   defmodule SlowTestJob do
     use Job
 
     def perform(queue) do
-      :timer.sleep 200
+      :timer.sleep(200)
       send(Roger.Partition.NodeInfoTest, {:done, queue})
     end
   end
 
   test "get partition info" do
-    assert %{waiting: w, running: r} = NodeInfo.partitions
+    assert %{waiting: w, running: r} = NodeInfo.partitions()
     assert is_map(w)
     assert is_map(r)
   end
@@ -37,7 +37,7 @@ defmodule Roger.Partition.NodeInfoTest do
     :ok = Consumer.resume(@app, :default)
 
     :timer.sleep(50)
-    info = NodeInfo.running_jobs
+    info = NodeInfo.running_jobs()
     # assert info[@app] == NodeInfo.running_jobs(@app)
 
     assert is_map(info)
@@ -48,12 +48,12 @@ defmodule Roger.Partition.NodeInfoTest do
     job = jobs |> hd
 
     assert job.started_at > 0
-    assert (Roger.now - job.started_at) > 0
+    assert Roger.now() - job.started_at > 0
     assert job.module == SlowTestJob
     assert job.args == 1
 
     assert_receive {:done, 1}, 500
-    :timer.sleep 10
+    :timer.sleep(10)
 
     assert [] == NodeInfo.running_jobs()[@app]
     assert [] == NodeInfo.running_jobs(@app)
@@ -64,12 +64,13 @@ defmodule Roger.Partition.NodeInfoTest do
 
     {:ok, job} = Job.create(SlowTestJob, 4)
     :ok = Job.enqueue(job, @app)
-    :timer.sleep 100
+    :timer.sleep(100)
 
-    info = NodeInfo.running_partitions
+    info = NodeInfo.running_partitions()
 
     partition = info[@app]
-    assert partition[:default][:consumer_count] == 0 # we're paused
+    # we're paused
+    assert partition[:default][:consumer_count] == 0
     assert partition[:default][:max_workers] == 10
     assert partition[:default][:message_count] > 0
     assert partition[:default][:paused] == true
@@ -77,5 +78,4 @@ defmodule Roger.Partition.NodeInfoTest do
     :ok = Consumer.resume(@app, :default)
     assert_receive {:done, 4}, 500
   end
-
 end

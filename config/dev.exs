@@ -6,5 +6,4 @@ config :roger,
     port: 5672
   ]
 
-config :roger, :partitions,
-  example: [default: 10, other: 2]
+config :roger, :partitions, example: [default: 10, other: 2]

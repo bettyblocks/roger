@@ -35,7 +35,6 @@ defmodule Roger.Queue do
     "#{partition_id}-#{type}#{postfix}"
   end
 
-
   @doc """
   Flushes all messages on the given queue.
   """
@@ -48,5 +47,4 @@ defmodule Roger.Queue do
     :ok = AMQP.Channel.close(channel)
     result
   end
-
 end

@@ -9,12 +9,10 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
     require Logger
 
     def perform(_n) do
-      :timer.sleep 100
+      :timer.sleep(100)
       send(Roger.Partition.Consumer.ReconnectionTest, :reconnect_job_done)
     end
-
   end
-
 
   test "reconnect after enqueue job" do
     {:ok, job} = Job.create(MyJob, 1)
@@ -27,7 +25,6 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
     assert_receive :reconnect_job_done, 10000
   end
 
-
   # test "reconnect before enqueue job" do
   #   restart_amqp_connection()
   #   {:ok, job} = Job.create(MyJob, 1)
@@ -35,10 +32,8 @@ defmodule Roger.Partition.Consumer.ReconnectionTest do
   #   assert_receive :reconnect_job_done, 200
   # end
 
-
   defp restart_amqp_connection do
     pid = GenServer.call(Roger.AMQPClient, :get_connection_pid)
     Process.exit(pid, :kill)
   end
-
 end

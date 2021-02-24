@@ -35,5 +35,4 @@ defmodule Roger.Partition.WorkerSupervisor do
   def start_child(partition, channel, payload, meta) do
     Supervisor.start_child(GProc.via(name(partition)), [partition, channel, payload, meta])
   end
-
 end

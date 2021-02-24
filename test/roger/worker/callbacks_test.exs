@@ -10,7 +10,6 @@ defmodule Roger.Worker.CallbacksTest do
     def perform([]) do
       nil
     end
-
   end
 
   @payload :erlang.term_to_binary(%Job{id: "asdf", module: TestJob, args: []})
@@ -29,12 +28,11 @@ defmodule Roger.Worker.CallbacksTest do
 
     receive do
       :before_run_ok -> :ok
-    after 1000 ->
+    after
+      1000 ->
         flunk("before_run not executed")
     end
   end
-
-
 
   defmodule AfterRunWorkerCallback do
     use Roger.Partition.Worker.Callback
@@ -50,7 +48,8 @@ defmodule Roger.Worker.CallbacksTest do
 
     receive do
       :after_run_ok -> :ok
-    after 1000 ->
+    after
+      1000 ->
         flunk("after_run not executed")
     end
   end
@@ -64,11 +63,12 @@ defmodule Roger.Worker.CallbacksTest do
     use Roger.Partition.Worker.Callback
 
     def before_run(_app, _job) do
-      Roger.Worker.CallbacksTest.test_ref
+      Roger.Worker.CallbacksTest.test_ref()
     end
 
     def after_run(_app, _job, result, state) do
-      ^result = nil # assertion
+      # assertion
+      ^result = nil
       send(Roger.Worker.CallbacksTest, {:after_run_ok, state})
     end
   end
@@ -76,11 +76,13 @@ defmodule Roger.Worker.CallbacksTest do
   test "test before-and-after-run worker callbacks with state passing through" do
     Application.put_env(:roger, :callbacks, BeforeAfterRunWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
+
     receive do
       {:after_run_ok, r} ->
         assert test_ref() == r
         :ok
-    after 1000 ->
+    after
+      1000 ->
         flunk("after_run not executed correctly")
     end
   end
@@ -89,7 +91,7 @@ defmodule Roger.Worker.CallbacksTest do
 
   defmodule ErrorJob do
     use Roger.Job
-    def perform(_), do: raise RuntimeError, "foo"
+    def perform(_), do: raise(RuntimeError, "foo")
   end
 
   defmodule OnErrorWorkerCallback do
@@ -109,12 +111,12 @@ defmodule Roger.Worker.CallbacksTest do
   test "test on_error worker callback" do
     Application.put_env(:roger, :callbacks, OnErrorWorkerCallback)
     {:ok, _pid} = WorkerSupervisor.start_child(@app, :channel, @payload, nil)
+
     receive do
       :on_error_ok -> :ok
-    after 1000 ->
+    after
+      1000 ->
         flunk("on_error not executed")
     end
   end
-
-
 end

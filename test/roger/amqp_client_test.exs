@@ -9,16 +9,15 @@ defmodule Roger.AMQPClientTest do
   end
 
   test "open channel" do
-    assert {:ok, channel} = Roger.AMQPClient.open_channel
+    assert {:ok, channel} = Roger.AMQPClient.open_channel()
 
     assert %Channel{} = channel
     assert is_pid(channel.pid)
 
-    on_exit fn -> Channel.close(channel) end
+    on_exit(fn -> Channel.close(channel) end)
   end
 
   test "publish" do
     :ok = Roger.AMQPClient.publish("", "test-queue", "test-payload")
   end
-
 end

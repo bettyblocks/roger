@@ -10,7 +10,6 @@ defmodule Roger.Job.SystemTest do
 
   test "cross-cluster broadcast" do
     assert :ok = System.cast(:ping)
-    :timer.sleep 100
+    :timer.sleep(100)
   end
-
 end

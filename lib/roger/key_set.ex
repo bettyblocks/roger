@@ -72,7 +72,6 @@ defmodule Roger.KeySet do
 
   use GenServer
 
-
   def start_link(opts \\ []) do
     GenServer.start(__MODULE__, [opts])
   end
@@ -109,7 +108,6 @@ defmodule Roger.KeySet do
     GenServer.call(pid, {:set_operation, :difference, pid2})
   end
 
-
   # server side
 
   def init([opts]) do
@@ -122,7 +120,7 @@ defmodule Roger.KeySet do
   end
 
   def handle_call({:add_many, keys}, _from, state) do
-    state = Enum.reduce(keys, state, &(MapSet.put(&2, &1)))
+    state = Enum.reduce(keys, state, &MapSet.put(&2, &1))
     {:reply, :ok, state}
   end
 
@@ -144,8 +142,9 @@ defmodule Roger.KeySet do
 
   defp load_state(state) when is_binary(state) do
     state
-    |> :erlang.binary_to_term
+    |> :erlang.binary_to_term()
   end
+
   defp load_state(nil), do: MapSet.new()
 
   defp save_state(state) do
@@ -156,5 +155,4 @@ defmodule Roger.KeySet do
     {:ok, state2} = get_state(source)
     Kernel.apply(MapSet, operation, [state, load_state(state2)])
   end
-
 end

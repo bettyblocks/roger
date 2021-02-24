@@ -7,5 +7,4 @@ defmodule Roger.System.Command do
 
   def encode(struct), do: :erlang.term_to_binary(struct)
   def decode(struct), do: :erlang.binary_to_term(struct)
-
 end

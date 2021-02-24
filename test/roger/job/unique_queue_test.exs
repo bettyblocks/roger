@@ -16,14 +16,13 @@ defmodule Roger.Job.UniqueQueueTest do
   end
 
   test "job gets refused when queued twice" do
-
     {:ok, job} = Job.create(MyJob, ["job1"])
 
     :ok = Job.enqueue(job, @app)
     {:error, :duplicate} = Job.enqueue(job, @app)
     assert_receive "job1"
 
-    :timer.sleep 50
+    :timer.sleep(50)
 
     # can receive again after job has been processed
     :ok = Job.enqueue(job, @app)
@@ -35,7 +34,5 @@ defmodule Roger.Job.UniqueQueueTest do
 
     :ok = Job.enqueue(job, @app)
     assert_receive "job1"
-
   end
-
 end

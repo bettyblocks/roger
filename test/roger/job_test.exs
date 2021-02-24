@@ -11,9 +11,7 @@ defmodule Roger.JobTest do
     def perform([num]) do
       num * num
     end
-
   end
-
 
   test "job create" do
     {:ok, job} = Job.create(SquareJob, [2])
@@ -21,7 +19,6 @@ defmodule Roger.JobTest do
     assert is_list(job.args)
     assert is_binary(job.id)
   end
-
 
   defmodule QueueKeyJob do
     use Roger.Job
@@ -33,9 +30,7 @@ defmodule Roger.JobTest do
     def queue_key([num]) do
       "num-#{num}"
     end
-
   end
-
 
   test "job create with queue key" do
     {:ok, job} = Job.create(QueueKeyJob, [2])
@@ -65,13 +60,13 @@ defmodule Roger.JobTest do
   test "invalid decoded job, no id" do
     payload = :erlang.term_to_binary(%Job{})
     {:error, msg} = Job.decode(payload)
-    assert Regex.match? ~r/Job id must be set/, msg
+    assert Regex.match?(~r/Job id must be set/, msg)
   end
 
   test "invalid decoded job, unknown module" do
     payload = :erlang.term_to_binary(%Job{id: "asdf", module: NoExistingModule})
     {:error, msg} = Job.decode(payload)
-    assert Regex.match? ~r/Unknown job module/, msg
+    assert Regex.match?(~r/Unknown job module/, msg)
   end
 
   defmodule MyCustomJob do
@@ -80,13 +75,12 @@ defmodule Roger.JobTest do
   test "invalid decoded job, invalid Job module" do
     payload = :erlang.term_to_binary(%Job{id: "asdf", module: MyCustomJob})
     {:error, msg} = Job.decode(payload)
-    assert Regex.match? ~r/Invalid job module/, msg
+    assert Regex.match?(~r/Invalid job module/, msg)
   end
 
   test "invalid decoded job, unknown module (string)" do
     payload = :erlang.term_to_binary(%Job{id: "asdf", module: "NoExisting"})
     {:error, msg} = Job.decode(payload)
-    assert Regex.match? ~r/Job module must be an atom/, msg
+    assert Regex.match?(~r/Job module must be an atom/, msg)
   end
-
 end

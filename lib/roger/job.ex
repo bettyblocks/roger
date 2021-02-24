@@ -41,7 +41,15 @@ defmodule Roger.Job do
   @type t :: %__MODULE__{}
 
   @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count started_at queued_at)a}
-  defstruct id: nil, module: nil, args: nil, queue_key: nil, execution_key: nil, retry_count: 0, started_at: 0, queued_at: 0, max_execution_time: :infinity
+  defstruct id: nil,
+            module: nil,
+            args: nil,
+            queue_key: nil,
+            execution_key: nil,
+            retry_count: 0,
+            started_at: 0,
+            queued_at: 0,
+            max_execution_time: :infinity
 
   alias Roger.{Queue, Partition.Global, Job}
 
@@ -61,7 +69,7 @@ defmodule Roger.Job do
     if job.queue_key != nil and Global.queued?(partition_id, job.queue_key, :add) do
       {:error, :duplicate}
     else
-      job = %Job{job | queued_at: Roger.now}
+      job = %Job{job | queued_at: Roger.now()}
       Roger.AMQPClient.publish("", queue, encode(job), Job.publish_opts(job, partition_id))
     end
   end
@@ -70,10 +78,7 @@ defmodule Roger.Job do
   Constructs the AMQP options for publishing the job
   """
   def publish_opts(%__MODULE__{} = job, partition_id) do
-    [content_type: @content_type,
-     persistent: true,
-     message_id: job.id,
-     app_id: partition_id]
+    [content_type: @content_type, persistent: true, message_id: job.id, app_id: partition_id]
   end
 
   @doc """
@@ -91,8 +96,8 @@ defmodule Roger.Job do
     end
   end
 
-  @callback queue_key(any) :: String.t
-  @callback execution_key(any) :: String.t
+  @callback queue_key(any) :: String.t()
+  @callback execution_key(any) :: String.t()
   @callback queue_type(any) :: atom
   @callback perform(any) :: any
   @callback retryable?() :: true | false
@@ -125,7 +130,7 @@ defmodule Roger.Job do
   def create(module, args \\ [], id \\ generate_job_id()) when is_atom(module) do
     keys =
       ~w(queue_key execution_key)a
-      |> Enum.map(fn(prop) ->
+      |> Enum.map(fn prop ->
         if function_exported?(module, prop, 1) do
           {prop, Kernel.apply(module, prop, [args])}
         else
@@ -134,15 +139,18 @@ defmodule Roger.Job do
       end)
       |> Enum.into(%{})
 
-    max_execution_time = if function_exported?(module, :max_execution_time, 0) do
-      execution_time = case apply(module, :max_execution_time, []) do
-        0 -> 1
-        execution_time -> execution_time
+    max_execution_time =
+      if function_exported?(module, :max_execution_time, 0) do
+        execution_time =
+          case apply(module, :max_execution_time, []) do
+            0 -> 1
+            execution_time -> execution_time
+          end
+
+        %{max_execution_time: execution_time}
+      else
+        %{}
       end
-      %{max_execution_time: execution_time}
-    else
-      %{}
-    end
 
     %__MODULE__{module: module, args: args, id: id}
     |> Map.merge(keys)
@@ -167,33 +175,33 @@ defmodule Roger.Job do
   @doc """
   Decode a binary payload into a Job struct, and validates it.
   """
-  @spec decode(data :: binary) :: {:ok, Roger.Job.t} | {:error, msg :: String.t}
+  @spec decode(data :: binary) :: {:ok, Roger.Job.t()} | {:error, msg :: String.t()}
   def decode(payload) do
-    (try do
-       {:ok, :erlang.binary_to_term(payload)}
-     rescue
-       ArgumentError ->
-         {:error, "Job decoding error"}
-     end)
-     |> validate
+    try do
+      {:ok, :erlang.binary_to_term(payload)}
+    rescue
+      ArgumentError ->
+        {:error, "Job decoding error"}
+    end
+    |> validate
   end
 
   @doc """
   Encodes a job into a binary payload.
   """
-  @spec encode(job :: Job.t) :: binary
+  @spec encode(job :: Job.t()) :: binary
   def encode(job) do
-    job |> :erlang.term_to_binary
+    job |> :erlang.term_to_binary()
   end
 
   defp validate({:ok, job}), do: validate(job)
   defp validate({:error, _} = e), do: e
 
-  defp validate(%__MODULE__{id: id}) when not(is_binary(id)) do
+  defp validate(%__MODULE__{id: id}) when not is_binary(id) do
     {:error, "Job id must be set"}
   end
 
-  defp validate(%__MODULE__{module: module}) when not(is_atom(module)) do
+  defp validate(%__MODULE__{module: module}) when not is_atom(module) do
     {:error, "Job module must be an atom"}
   end
 
@@ -201,14 +209,18 @@ defmodule Roger.Job do
     case Code.ensure_loaded(module) do
       {:error, :nofile} ->
         {:error, "Unknown job module: #{module}"}
+
       {:error, :embedded} ->
         Logger.error("Module not available: #{module}")
         {:error, "Module not loaded correctly: #{module}"}
+
       {:module, ^module} ->
         functions = module.__info__(:functions)
+
         case Enum.member?(functions, {:perform, 1}) do
           false ->
             {:error, "Invalid job module: #{module} does not implement Roger.Job"}
+
           true ->
             {:ok, job}
         end
@@ -232,5 +244,4 @@ defmodule Roger.Job do
       false
     end
   end
-
 end

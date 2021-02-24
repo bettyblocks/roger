@@ -13,6 +13,7 @@ defmodule Roger.PartitionSupervisor do
     children = [
       supervisor(Roger.Partition.ContainingSupervisor, [], restart: :transient)
     ]
+
     supervise(children, strategy: :simple_one_for_one)
   end
 
@@ -23,5 +24,4 @@ defmodule Roger.PartitionSupervisor do
   def stop_child(pid) do
     Supervisor.terminate_child(__MODULE__, pid)
   end
-
 end

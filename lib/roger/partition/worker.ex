@@ -47,7 +47,9 @@ defmodule Roger.Partition.Worker do
       partition_id: partition_id,
       channel: channel,
       meta: meta,
-      raw_payload: payload}
+      raw_payload: payload
+    }
+
     Process.flag(:trap_exit, true)
     {:ok, state, 0}
   end
@@ -69,21 +71,25 @@ defmodule Roger.Partition.Worker do
   def handle_info(:timeout, state) do
     case Job.decode(state.raw_payload) do
       {:ok, job} ->
-        job = %Job{job | started_at: Roger.now}
+        job = %Job{job | started_at: Roger.now()}
+
         cond do
           Global.cancelled?(state.partition_id, job.id, :remove) ->
             job_cancel(job, state)
             {:stop, :normal, state}
+
           job_waiting?(job, state) ->
             job_waiting(job, state)
             {:stop, :normal, state}
+
           true ->
             pid = job_startup(job, state)
             {:noreply, %{state | worker_task_pid: pid, job: job}}
         end
+
       {:error, message} ->
         # Decode error
-        Logger.debug "Job decoding error: #{inspect message} #{inspect state.raw_payload}"
+        Logger.debug("Job decoding error: #{inspect(message)} #{inspect(state.raw_payload)}")
         job_done(nil, :ack, state)
         {:stop, :normal, state}
     end
@@ -105,6 +111,7 @@ defmodule Roger.Partition.Worker do
     state.job.id
     |> name()
     |> GProc.unregp()
+
     GProc.unregp({:roger_job_worker_meta, state.partition_id, state.job.id})
     {:stop, :normal, state}
   end
@@ -139,6 +146,7 @@ defmodule Roger.Partition.Worker do
 
   defp execute_job(job, state, parent) do
     before_run_state = callback(:before_run, [state.partition_id, job])
+
     try do
       result = Job.execute(job)
 
@@ -153,9 +161,9 @@ defmodule Roger.Partition.Worker do
   end
 
   defp handle_error(job, {type, exception}, before_run_state, state, stacktrace) do
-    cb = with true <- Job.retryable?(job),
-         {:ok, :buried} <- Retry.retry(state.channel, state.partition_id, job)
-      do
+    cb =
+      with true <- Job.retryable?(job),
+           {:ok, :buried} <- Retry.retry(state.channel, state.partition_id, job) do
         :on_buried
       else
         _ -> :on_error
@@ -169,14 +177,17 @@ defmodule Roger.Partition.Worker do
     GProc.regp(name(job.id))
     GProc.regp({:roger_job_worker_meta, state.partition_id, job.id}, job)
     parent = self()
-    {pid, _ref} = spawn_monitor(fn () ->
-      execute_job(job, state, parent)
-      send(parent, :job_finished)
-    end)
+
+    {pid, _ref} =
+      spawn_monitor(fn ->
+        execute_job(job, state, parent)
+        send(parent, :job_finished)
+      end)
 
     if job.max_execution_time != :infinity do
       Process.send_after(self(), :handle_job_timeout, job.max_execution_time * 1000)
     end
+
     pid
   end
 
@@ -198,7 +209,6 @@ defmodule Roger.Partition.Worker do
 
   # Ran at the end of the job, either ack'ing or nack'ing the message.
   defp job_done(job, ack_or_nack, state) do
-
     if job != nil do
       if job.queue_key != nil do
         :ok = Global.remove_queued(state.partition_id, job.queue_key)
@@ -213,6 +223,7 @@ defmodule Roger.Partition.Worker do
     end
 
     meta = state.meta
+
     if meta != nil do
       Kernel.apply(AMQP.Basic, ack_or_nack, [state.channel, meta.delivery_tag])
     end
@@ -223,6 +234,7 @@ defmodule Roger.Partition.Worker do
     mod = Application.get_env(:roger, :callbacks)
     # Make sure module is loaded so function_exported? works correctly
     Code.ensure_loaded(mod)
+
     if mod != nil do
       try do
         # We never want the callback to crash the worker process.
@@ -232,8 +244,8 @@ defmodule Roger.Partition.Worker do
           nil
         end
       catch
-        :exit=t, e ->
-          Logger.error "Worker error in callback function #{mod}.#{callback}: #{t}:#{e}"
+        :exit = t, e ->
+          Logger.error("Worker error in callback function #{mod}.#{callback}: #{t}:#{e}")
       end
     end
   end
@@ -247,6 +259,7 @@ defmodule Roger.Partition.Worker do
   # enqueues it back on the Job's main queue, if there is any
   defp check_execution_waiting(job, state) do
     name = execution_waiting_queue(job, state)
+
     case AMQP.Basic.get(state.channel, name) do
       {:ok, payload, meta} ->
         # enqueue the job again
@@ -254,6 +267,7 @@ defmodule Roger.Partition.Worker do
         :ok = Job.enqueue(job, state.partition_id)
         # ack it to have it removed from waiting queue
         :ok = AMQP.Basic.ack(state.channel, meta.delivery_tag)
+
       {:empty, _} ->
         # FIXME delete waiting queue when empty - this can error
         :ok
@@ -266,11 +280,13 @@ defmodule Roger.Partition.Worker do
   defp execution_waiting_queue(job, state, return \\ :prefixed) do
     bare_name = "execution-waiting-#{job.execution_key}"
     name = Queue.make_name(state.partition_id, bare_name)
-    {:ok, _} = AMQP.Queue.declare(state.channel, name, durable: true, arguments: [{"x-expires", @execution_waiting_expiry}])
+
+    {:ok, _} =
+      AMQP.Queue.declare(state.channel, name, durable: true, arguments: [{"x-expires", @execution_waiting_expiry}])
+
     case return do
       :prefixed -> name
       :unprefixed -> bare_name
     end
   end
-
 end

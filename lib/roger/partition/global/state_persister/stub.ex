@@ -12,10 +12,10 @@ defmodule Roger.Partition.Global.StatePersister.Stub do
   @behaviour StatePersister
 
   def init(_id), do: :ok
+
   def load(_id) do
     {:error, :not_implemented}
   end
 
   def store(_id, _data), do: :ok
-
 end

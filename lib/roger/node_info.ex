@@ -9,8 +9,7 @@ defmodule Roger.NodeInfo do
   Retrieve combined partition info on all running and waiting partitions, on this node.
   """
   def partitions() do
-    %{waiting: waiting_partitions(),
-      running: running_partitions()}
+    %{waiting: waiting_partitions(), running: running_partitions()}
   end
 
   @doc """
@@ -40,7 +39,7 @@ defmodule Roger.NodeInfo do
   """
   def running_jobs() do
     running_partitions()
-    |> Enum.map(fn({id, _queues}) ->
+    |> Enum.map(fn {id, _queues} ->
       {id, running_jobs(id)}
     end)
     |> Enum.into(%{})
@@ -51,6 +50,7 @@ defmodule Roger.NodeInfo do
   """
   def running_jobs(partition_id) do
     selector = {:roger_job_worker_meta, partition_id, :_}
+
     for {_pid, job} <- GProc.find_properties(selector) do
       job
     end
@@ -73,5 +73,4 @@ defmodule Roger.NodeInfo do
       pid
     end
   end
-
 end

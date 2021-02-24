@@ -20,13 +20,11 @@ defmodule Roger.Partition.ContainingSupervisor do
   end
 
   def init([partition]) do
-
     children = [
       supervisor(Roger.Partition.WorkerSupervisor, [partition], restart: :permanent),
-      worker(Roger.Partition.Consumer, [partition], restart: :permanent),
+      worker(Roger.Partition.Consumer, [partition], restart: :permanent)
     ]
 
     supervise(children, strategy: :one_for_one)
   end
-
 end

@@ -25,7 +25,7 @@ defmodule Roger.Partition do
 
   require Logger
 
-  @type queue_def :: {id :: String.t, max_workers :: non_neg_integer}
+  @type queue_def :: {id :: String.t(), max_workers :: non_neg_integer}
 
   @doc false
   def start_link do
@@ -39,7 +39,7 @@ defmodule Roger.Partition do
   supervision structure. When the partition has already been
   started, this calls `reconfigure/2` instead.
   """
-  @spec start(id :: String.t, queues :: [queue_def]) :: {:ok, pid}
+  @spec start(id :: String.t(), queues :: [queue_def]) :: {:ok, pid}
   def start(id, queues) do
     GenServer.call(__MODULE__, {:start, id, queues})
   end
@@ -47,7 +47,7 @@ defmodule Roger.Partition do
   @doc """
   Stop the given Roger partition
   """
-  @spec stop(id :: String.t) :: :ok | {:error, :not_running}
+  @spec stop(id :: String.t()) :: :ok | {:error, :not_running}
   def stop(id) do
     GenServer.call(__MODULE__, {:stop, id})
   end
@@ -55,7 +55,7 @@ defmodule Roger.Partition do
   @doc """
   Stop the parition of accepting new jobs so it can finish of the remaining jobs
   """
-  @spec safe_stop(id :: String.t) :: :ok | {:error, :not_running}
+  @spec safe_stop(id :: String.t()) :: :ok | {:error, :not_running}
   def safe_stop(id) do
     GenServer.call(__MODULE__, {:safe_stop, id})
   end
@@ -68,7 +68,7 @@ defmodule Roger.Partition do
   are stopped and messages in them will no longer be processed on this
   node.
   """
-  @spec reconfigure(id :: String.t, queues :: [queue_def]) :: :ok | {:error, :not_running}
+  @spec reconfigure(id :: String.t(), queues :: [queue_def]) :: :ok | {:error, :not_running}
   def reconfigure(id, queues) do
     if Consumer.is_alive?(id) do
       Consumer.reconfigure(id, queues)
@@ -127,16 +127,16 @@ defmodule Roger.Partition do
     case state.monitored[pid] do
       nil ->
         {:noreply, state}
+
       {id, queues} ->
-      {:noreply, %State{state |
-                        waiting: Map.put(state.waiting, id, {id, queues}),
-                        monitored: Map.delete(state.monitored, pid)}}
+        {:noreply,
+         %State{state | waiting: Map.put(state.waiting, id, {id, queues}), monitored: Map.delete(state.monitored, pid)}}
     end
   end
 
   defp start_all(partitions, state) do
     partitions
-    |> Enum.reduce(state, fn({id, queues}, state) ->
+    |> Enum.reduce(state, fn {id, queues}, state ->
       {_reply, state} = start_partition(id, queues, state)
       state
     end)
@@ -147,17 +147,20 @@ defmodule Roger.Partition do
   end
 
   defp start_partition(id, queues, state) do
-    if System.connected? && System.active? do
+    if System.connected?() && System.active?() do
       # make sure a statemanager instance is running
       Singleton.start_child(Global, [id], {:app_global, id})
       # start partition supervision tree
-      pid = case Roger.PartitionSupervisor.start_child(id) do
-              {:ok, pid} ->
-                Logger.debug "Started Roger partition: #{id}"
-                pid
-              {:error, {:already_started, pid}} ->
-                pid
-            end
+      pid =
+        case Roger.PartitionSupervisor.start_child(id) do
+          {:ok, pid} ->
+            Logger.debug("Started Roger partition: #{id}")
+            pid
+
+          {:error, {:already_started, pid}} ->
+            pid
+        end
+
       :ok = Consumer.reconfigure(id, queues)
       _ref = Process.monitor(pid)
       {{:ok, pid}, %State{state | monitored: Map.put(state.monitored, pid, {id, queues})}}
@@ -172,9 +175,10 @@ defmodule Roger.Partition do
         with :ok <- Consumer.pause_all(id) do
           {:ok, state}
         else
-          err -> Logger.debug "Something went wrong stopping the partition #{inspect(err)}"
+          err -> Logger.debug("Something went wrong stopping the partition #{inspect(err)}")
         end
-      :nil ->
+
+      nil ->
         {{:error, :not_running}, state}
     end
   end
@@ -185,7 +189,8 @@ defmodule Roger.Partition do
         :ok = Singleton.stop_child(Global, [id])
         :ok = Roger.PartitionSupervisor.stop_child(pid)
         {:ok, %State{state | monitored: Map.delete(state.monitored, pid)}}
-      :nil ->
+
+      nil ->
         {{:error, :not_running}, state}
     end
   end
@@ -193,5 +198,4 @@ defmodule Roger.Partition do
   defp get_predefined_apps() do
     :application.get_env(:roger, :partitions, [])
   end
-
 end

@@ -12,7 +12,6 @@ defmodule Roger.Job.WorkerTimeoutTest do
     end
   end
 
-
   defmodule MyLongJob do
     use Roger.Job
 
@@ -22,7 +21,6 @@ defmodule Roger.Job.WorkerTimeoutTest do
     end
 
     def max_execution_time(), do: 1
-
   end
 
   test "job should not finish when over timeout" do
@@ -40,5 +38,4 @@ defmodule Roger.Job.WorkerTimeoutTest do
 
     assert_receive :job_done
   end
-
 end

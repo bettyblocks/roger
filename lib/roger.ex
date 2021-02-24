@@ -39,5 +39,4 @@ defmodule Roger do
   def now() do
     :os.system_time(1000)
   end
-
 end

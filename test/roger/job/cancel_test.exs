@@ -12,14 +12,12 @@ defmodule Roger.Job.CancelTest do
     def on_cancel(_app, job) do
       send(Roger.Job.CancelTest, {:cancel, job.id})
     end
-
   end
 
   defmodule MyJob do
     use Roger.Job
     def perform(_), do: nil
   end
-
 
   test "statemanager cancel logic" do
     {:ok, job} = Job.create(MyJob, [2])
@@ -34,9 +32,7 @@ defmodule Roger.Job.CancelTest do
     # cancel set
     assert true == Global.cancelled?(@app, job.id, :remove)
     assert false == Global.cancelled?(@app, job.id, :remove)
-
   end
-
 
   test "it can cancel a job that's in the queue" do
     {:ok, job} = Job.create(MyJob, [2])
@@ -46,12 +42,11 @@ defmodule Roger.Job.CancelTest do
     receive do
       {:cancel, id} ->
         assert id == job.id
-    after 1000 ->
+    after
+      1000 ->
         flunk("Enqueued job not cancelled.")
     end
   end
-
-
 
   defmodule MyCancellableJob do
     use Roger.Job
@@ -63,14 +58,14 @@ defmodule Roger.Job.CancelTest do
   end
 
   test "it can cancel a job that's running" do
-
     # Create and enqueue a job
     {:ok, job} = Job.create(MyCancellableJob, [2])
     :ok = Job.enqueue(job, @app)
     # Wait until it says it's running
     receive do
       :job_running -> :ok
-    after 1000 ->
+    after
+      1000 ->
         flunk("Job did not start")
     end
 
@@ -81,10 +76,9 @@ defmodule Roger.Job.CancelTest do
     receive do
       {:cancel, id} ->
         assert id == job.id
-    after 1000 ->
+    after
+      1000 ->
         flunk("Running job not cancelled.")
     end
-
   end
-
 end

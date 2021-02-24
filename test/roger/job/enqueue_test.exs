@@ -4,14 +4,12 @@ defmodule Roger.Job.EnqueueTest do
 
   alias Roger.Job
 
-
   defmodule MyCalculation do
     use Roger.Job
 
     def perform([num]) do
       send(Roger.Job.EnqueueTest, num * num)
     end
-
   end
 
   test "job enqueue" do
@@ -29,5 +27,4 @@ defmodule Roger.Job.EnqueueTest do
     assert_receive 4
     assert_receive 4
   end
-
 end
