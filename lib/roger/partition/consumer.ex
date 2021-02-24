@@ -86,10 +86,6 @@ defmodule Roger.Partition.Consumer do
   end
 
   def handle_call(:get_queues, _from, state) do
-    # strip channel from the queues
-    # queues = state.queues |> Enum.map(fn(q) -> %{q | channel: nil} end)
-    #    require IEx
-    #    IEx.pry()
     channel_name = Application.get_env(:roger, :channel_name)
     {:ok, channel} = AMQP.Application.get_channel(channel_name)
 
