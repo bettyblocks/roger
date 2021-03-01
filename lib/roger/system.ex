@@ -110,6 +110,7 @@ defmodule Roger.System do
   end
 
   def init([]) do
+    Process.flag(:trap_exit, true)
     {:ok, %State{}, 0}
   end
 
@@ -215,28 +216,39 @@ defmodule Roger.System do
   end
 
   def handle_info(:timeout, state) do
-    case Roger.AMQPClient.open_channel() do
-      {:ok, channel} ->
-        Process.monitor(channel.pid)
+    connection_name = Application.get_env(:roger, :connection_name)
 
-        # Fanout / pubsub setup
-        :ok = Exchange.declare(channel, @system_exchange, :fanout)
-        {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
-        Queue.bind(channel, info.queue, @system_exchange)
-        {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
+    with {:ok, amqp_conn} <- AMQP.Application.get_connection(connection_name),
+         {:ok, channel} <- AMQP.Channel.open(amqp_conn, {AMQP.DirectConsumer, self()}) do
+      Process.monitor(channel.pid)
+      # Fanout / pubsub setup
+      :ok = Exchange.declare(channel, @system_exchange, :fanout)
+      {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
+      Queue.bind(channel, info.queue, @system_exchange)
+      {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
-        # reply queue
-        {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
-        {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
+      # reply queue
+      {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
+      {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
-        {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
+      Process.send_after(self(), :check_started_partitions, 1000)
 
-      {:error, :disconnected} ->
+      {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
+    else
+      {:error, :not_connected} ->
         # try again if the AMQP client is back up
         Process.send_after(self(), :timeout, 1000)
         {:noreply, %State{state | channel: nil, reply_queue: nil}}
     end
   end
+
+  def terminate(reason, state) when reason in [:shutdown, :normal] do
+    if Process.alive?(state.channel.pid) do
+      AMQP.Channel.close(state.channel)
+    end
+  end
+
+  def terminate(_reason, _state), do: :ok
 
   defp node_name do
     to_string(Node.self())

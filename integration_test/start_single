@@ -1,9 +1,0 @@
-#!/bin/bash
-export MIX_ENV=dev
-HOST=roger
-if [ "$1" != "" ]; then
-    HOST=$1
-fi
-
-mix compile
-exec iex --sname $HOST -pa '_build/dev/lib/*/ebin' -e Roger.Integration.start_single

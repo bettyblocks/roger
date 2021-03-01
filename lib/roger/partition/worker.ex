@@ -25,10 +25,10 @@ defmodule Roger.Partition.Worker do
   # after how long the wait queue for execution_key-type jobs expires
   @execution_waiting_expiry 1800 * 1000
 
-  use GenServer
+  use GenServer, restart: :transient
 
-  def start_link(partition_id, channel, payload, meta) do
-    GenServer.start_link(__MODULE__, [partition_id, channel, payload, meta])
+  def start_link(worker_input) do
+    GenServer.start_link(__MODULE__, worker_input)
   end
 
   def name(job_id) do
@@ -39,6 +39,15 @@ defmodule Roger.Partition.Worker do
 
   defmodule State do
     @moduledoc false
+    @type t :: %__MODULE__{
+            partition_id: String.t(),
+            meta: map,
+            raw_payload: binary,
+            channel: AMQP.Channel.t(),
+            worker_task_pid: pid,
+            job: Job.t()
+          }
+
     defstruct partition_id: nil, meta: nil, raw_payload: nil, channel: nil, worker_task_pid: nil, job: nil
   end
 
@@ -95,17 +104,13 @@ defmodule Roger.Partition.Worker do
     end
   end
 
-  @doc """
-  When job is finished it sends a message to the GenServer to finish off the worker task.
-  """
+  #  When job is finished it sends a message to the GenServer to finish off the worker task.
   @spec handle_info(:job_finished, State.t()) :: {:stop, :normal, State.t()}
   def handle_info(:job_finished, state) do
     {:stop, :normal, state}
   end
 
-  @doc """
-  When job has errors the async job task sends a message to this worker to correctly unregister and shutdown the worker.
-  """
+  #  When job has errors the async job task sends a message to this worker to correctly unregister and shutdown the worker.
   @spec handle_info(:job_errored, State.t()) :: {:stop, :normal, State.t()}
   def handle_info(:job_errored, state) do
     state.job.id
@@ -116,9 +121,7 @@ defmodule Roger.Partition.Worker do
     {:stop, :normal, state}
   end
 
-  @doc """
-  If a timeout is set on the job and the job exceeds the timeout this method is called and correctly shuts down the job.
-  """
+  #  If a timeout is set on the job and the job exceeds the timeout this method is called and correctly shuts down the job.
   @spec handle_info(:handle_job_timeout, State.t()) :: {:stop, :normal, State.t()}
   def handle_info(:handle_job_timeout, %{worker_task_pid: pid, job: job} = state) when is_pid(pid) do
     Process.exit(pid, :kill)
@@ -126,18 +129,14 @@ defmodule Roger.Partition.Worker do
     {:stop, :normal, state}
   end
 
-  @doc """
-  This handle a hard crash
-  """
+  #  This handle a hard crash
   @spec handle_info({:DOWN, reference(), :process, pid(), String.t()}, State.t()) :: {:stop, :normal, State.t()}
   def handle_info({:DOWN, _ref, :process, _child, reason}, state) do
     handle_error(state.job, {:worker_crash, reason}, nil, state, nil)
     {:stop, :normal, state}
   end
 
-  @doc """
-  This is called when job needs to be cancelled it kills running job and runs the timeout task to correctly finish the job.
-  """
+  #  This is called when job needs to be cancelled it kills running job and runs the timeout task to correctly finish the job.
   @spec handle_call(:cancel_job, any(), State.t()) :: {:reply, :ok, State.t(), 0}
   def handle_call(:cancel_job, _source, state) do
     Process.exit(state.worker_task_pid, :kill)
@@ -155,7 +154,7 @@ defmodule Roger.Partition.Worker do
       callback(:after_run, [state.partition_id, job, result, before_run_state])
     catch
       type, exception ->
-        handle_error(job, {type, exception}, before_run_state, state, System.stacktrace())
+        handle_error(job, {type, exception}, before_run_state, state, __STACKTRACE__)
         send(parent, :job_errored)
     end
   end
@@ -225,7 +224,9 @@ defmodule Roger.Partition.Worker do
     meta = state.meta
 
     if meta != nil do
-      Kernel.apply(AMQP.Basic, ack_or_nack, [state.channel, meta.delivery_tag])
+      if Process.alive?(state.channel.pid) do
+        Kernel.apply(AMQP.Basic, ack_or_nack, [state.channel, meta.delivery_tag])
+      end
     end
   end
 

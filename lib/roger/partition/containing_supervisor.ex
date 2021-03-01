@@ -3,11 +3,11 @@ defmodule Roger.Partition.ContainingSupervisor do
   The supervisor hierarchy for a single partition
   """
 
-  use Supervisor
+  use Supervisor, restart: :transient
 
   alias Roger.GProc
 
-  def start_link(partition) do
+  def start_link([partition]) do
     Supervisor.start_link(__MODULE__, [partition], name: GProc.via(name(partition)))
   end
 
@@ -21,10 +21,10 @@ defmodule Roger.Partition.ContainingSupervisor do
 
   def init([partition]) do
     children = [
-      supervisor(Roger.Partition.WorkerSupervisor, [partition], restart: :permanent),
-      worker(Roger.Partition.Consumer, [partition], restart: :permanent)
+      {Roger.Partition.WorkerSupervisor, partition},
+      {Roger.Partition.Consumer, partition}
     ]
 
-    supervise(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end

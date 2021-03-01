@@ -27,19 +27,17 @@ defmodule Roger.AppCase do
             end
 
           Roger.Partition.stop(@app)
-
           # Clean up all queues
-          {:ok, channel} = Roger.AMQPClient.open_channel()
+          channel_name = Application.get_env(:roger, :channel_name)
+          {:ok, channel} = AMQP.Application.get_channel(channel_name)
 
           for {id, queues} <- partition_info, {q, _} <- queues do
             queue = Roger.Queue.make_name(id, q)
             {:ok, _} = AMQP.Queue.delete(channel, queue)
           end
 
-          AMQP.Channel.close(channel)
-
           # Remove all roger env. variables except AMQP connection info
-          for {key, _} <- Application.get_all_env(:roger), key != :amqp do
+          for {key, _} <- Application.get_all_env(:roger), key not in [:channel_name, :connection_name] do
             Application.delete_env(:roger, key)
           end
         end)

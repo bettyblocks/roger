@@ -4,7 +4,7 @@ defmodule Roger.ShutdownHandler do
   By first stop consuming new jobs and then wait for certain time for workers to finish.
   """
 
-  @shutdown_overflow 5_000
+  @shutdown_overflow 10_000
   @shutdown_timeout Application.get_env(:roger, :shutdown_timeout, 15_000) + @shutdown_overflow
   use GenServer, restart: :transient, shutdown: @shutdown_timeout
 
@@ -39,7 +39,10 @@ defmodule Roger.ShutdownHandler do
       |> Enum.into(MapSet.new())
       |> await_workers(timer)
 
-      Roger.AMQPClient.close()
+      Enum.each(Roger.NodeInfo.running_partitions(), fn {key, _} ->
+        Roger.Partition.stop(key)
+      end)
+
       Logger.info("Finished shutting down roger.")
     end
   end

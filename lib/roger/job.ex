@@ -70,7 +70,9 @@ defmodule Roger.Job do
       {:error, :duplicate}
     else
       job = %Job{job | queued_at: Roger.now()}
-      Roger.AMQPClient.publish("", queue, encode(job), Job.publish_opts(job, partition_id))
+      channel_name = Application.get_env(:roger, :channel_name)
+      {:ok, channel} = AMQP.Application.get_channel(channel_name)
+      AMQP.Basic.publish(channel, "", queue, encode(job), Job.publish_opts(job, partition_id))
     end
   end
 

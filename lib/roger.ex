@@ -15,17 +15,24 @@ defmodule Roger do
     end
   end
 
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [opts]},
+      type: :supervisor,
+      restart: :permanent,
+      shutdown: 500
+    }
+  end
+
   def start_link(_opts \\ []) do
     import Supervisor.Spec, warn: false
 
-    amqp_config = Application.get_env(:roger, :amqp)
-
     children = [
-      worker(Roger.AMQPClient, [amqp_config]),
       Roger.System,
       Roger.ApplySystem,
-      supervisor(Roger.PartitionSupervisor, []),
-      worker(Roger.Partition, []),
+      Roger.PartitionSupervisor,
+      Roger.Partition,
       Roger.ShutdownHandler.child_spec([])
     ]
 
