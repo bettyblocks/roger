@@ -1,6 +1,6 @@
 # Roger: RabbitMQ-backed job processing system
 
-[![Build Status](https://travis-ci.org/bettyblocks/roger.png?branch=master)](https://travis-ci.org/bettyblocks/roger)
+[![Build Status](https://github.com/bettyblocks/roger/actions/workflows/elixir/badge.svg)](https://github.com/bettyblocks/roger/actions)
 [![Hex pm](http://img.shields.io/hexpm/v/roger.svg?style=flat)](https://hex.pm/packages/roger)
 [![Inline docs](http://inch-ci.org/github/bettyblocks/roger.svg)](http://inch-ci.org/github/bettyblocks/roger)
 
