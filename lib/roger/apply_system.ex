@@ -143,7 +143,7 @@ defmodule Roger.ApplySystem do
     end
   end
 
-  def terminate(reason, state), do: close_channel(state)
+  def terminate(_reason, state), do: close_channel(state)
 
   defp close_channel(%{channel: %{pid: pid} = channel}) do
     if Process.alive?(pid) do
