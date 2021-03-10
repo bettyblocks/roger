@@ -256,6 +256,8 @@ defmodule Roger.System do
     end
   end
 
+  defp close_channel(_), do: nil
+
   defp node_name do
     to_string(Node.self())
   end
