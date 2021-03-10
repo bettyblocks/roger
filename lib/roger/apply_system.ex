@@ -79,16 +79,6 @@ defmodule Roger.ApplySystem do
     {:noreply, state |> State.add_waiting_reply(id, from, nodes)}
   end
 
-  def handle_info(:check_started_partitions, state) do
-    Process.send_after(self(), :check_started_partitions, 1000)
-
-    if state.channel && state.active do
-      :ok = GenServer.cast(Roger.Partition, :check_partitions)
-    end
-
-    {:noreply, state}
-  end
-
   def handle_info({:basic_consume_ok, _meta}, state) do
     {:noreply, state}
   end
@@ -121,12 +111,15 @@ defmodule Roger.ApplySystem do
 
   def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
     # try again if the AMQP client is back up
+    close_channel(state)
     Process.send_after(self(), :timeout, 1000)
     {:noreply, %State{state | channel: nil}}
   end
 
   def handle_info(:timeout, state) do
     connection_name = Application.get_env(:roger, :connection_name)
+    # If channel still open make sure it's closed
+    close_channel(state)
 
     with {:ok, amqp_conn} <- AMQP.Application.get_connection(connection_name),
          {:ok, channel} <- AMQP.Channel.open(amqp_conn, {AMQP.DirectConsumer, self()}) do
@@ -150,11 +143,15 @@ defmodule Roger.ApplySystem do
     end
   end
 
-  def terminate(reason, state) when reason in [:shutdown, :normal] do
-    if Process.alive?(state.channel.pid) do
-      AMQP.Channel.close(state.channel)
+  def terminate(reason, state), do: close_channel(state)
+
+  defp close_channel(%{channel: %{pid: pid} = channel}) do
+    if Process.alive?(pid) do
+      AMQP.Channel.close(channel)
     end
   end
+
+  defp close_channel(_), do: nil
 
   defp node_name do
     "apply-" <> to_string(Node.self())
