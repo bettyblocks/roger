@@ -116,14 +116,20 @@ defmodule Roger.ApplySystem do
     {:noreply, %State{state | channel: nil}}
   end
 
+  def handle_info({:EXIT, _, reason}, state) do
+    close_channel(state)
+    {:stop, reason, %State{state | channel: nil}}
+  end
+
   def handle_info(:timeout, state) do
     connection_name = Application.get_env(:roger, :connection_name)
     # If channel still open make sure it's closed
     close_channel(state)
 
     with {:ok, amqp_conn} <- AMQP.Application.get_connection(connection_name),
-         {:ok, channel} <- AMQP.Channel.open(amqp_conn, {AMQP.DirectConsumer, self()}) do
+         {:ok, channel} <- AMQP.Channel.open(amqp_conn) do
       Process.monitor(channel.pid)
+      Process.link(channel.pid)
       # Fanout / pubsub setup
       :ok = Exchange.declare(channel, @system_exchange, :fanout)
       {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
@@ -132,11 +138,12 @@ defmodule Roger.ApplySystem do
 
       # reply queue
       {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
+
       {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
       {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
     else
-      {:error, :not_connected} ->
+      {:error, error} when error in [:not_connected, :closing] ->
         # try again if the AMQP client is back up
         Process.send_after(self(), :timeout, 1000)
         {:noreply, %State{state | channel: nil, reply_queue: nil}}
