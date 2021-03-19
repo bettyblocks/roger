@@ -228,9 +228,9 @@ defmodule Roger.System do
       Process.monitor(channel.pid)
       Process.link(channel.pid)
       # Fanout / pubsub setup
-      :ok = Exchange.declare(channel, @system_exchange, :fanout)
+      :ok = Exchange.declare(channel, system_exchange_name(), :fanout)
       {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
-      Queue.bind(channel, info.queue, @system_exchange)
+      Queue.bind(channel, info.queue, system_exchange_name())
       {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
       # reply queue
@@ -302,5 +302,16 @@ defmodule Roger.System do
 
   defp generate_id do
     :crypto.strong_rand_bytes(10) |> Base.hex_encode32(case: :lower)
+  end
+
+  defp system_exchange_name do
+    prefix =
+      if p = Application.get_env(:roger, :system_exchange_prefix) do
+        "#{p}-"
+      else
+        ""
+      end
+
+    prefix <> @system_exchange
   end
 end

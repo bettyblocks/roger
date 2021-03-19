@@ -58,7 +58,7 @@ defmodule Roger.ApplySystem do
       content_type: @command_content_type
     ]
 
-    :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
+    :ok = Basic.publish(state.channel, system_exchange_name(), "", payload, opts)
     {:reply, :ok, state}
   end
 
@@ -73,7 +73,7 @@ defmodule Roger.ApplySystem do
       reply_to: state.reply_queue
     ]
 
-    :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
+    :ok = Basic.publish(state.channel, system_exchange_name(), "", payload, opts)
     filtered_nodes = Enum.filter(:erlang.nodes(), &(!String.contains?(Atom.to_string(&1), "_maint_")))
     nodes = [node() | filtered_nodes]
     {:noreply, state |> State.add_waiting_reply(id, from, nodes)}
@@ -131,9 +131,9 @@ defmodule Roger.ApplySystem do
       Process.monitor(channel.pid)
       Process.link(channel.pid)
       # Fanout / pubsub setup
-      :ok = Exchange.declare(channel, @system_exchange, :fanout)
+      :ok = Exchange.declare(channel, system_exchange_name(), :fanout)
       {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
-      Queue.bind(channel, info.queue, @system_exchange)
+      Queue.bind(channel, info.queue, system_exchange_name())
       {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
 
       # reply queue
@@ -179,5 +179,16 @@ defmodule Roger.ApplySystem do
 
   defp generate_id do
     :crypto.strong_rand_bytes(10) |> Base.hex_encode32(case: :lower)
+  end
+
+  defp system_exchange_name do
+    prefix =
+      if p = Application.get_env(:roger, :system_exchange_prefix) do
+        "#{p}-"
+      else
+        ""
+      end
+
+    prefix <> @system_exchange
   end
 end
