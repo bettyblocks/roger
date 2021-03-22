@@ -148,7 +148,7 @@ defmodule Roger.System do
       content_type: @command_content_type
     ]
 
-    :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
+    :ok = Basic.publish(state.channel, system_exchange_name(), "", payload, opts)
     {:reply, :ok, state}
   end
 
@@ -163,7 +163,7 @@ defmodule Roger.System do
       reply_to: state.reply_queue
     ]
 
-    :ok = Basic.publish(state.channel, @system_exchange, "", payload, opts)
+    :ok = Basic.publish(state.channel, system_exchange_name(), "", payload, opts)
     filtered_nodes = Enum.filter(:erlang.nodes(), &(!String.contains?(Atom.to_string(&1), "_maint_")))
     nodes = [node() | filtered_nodes]
     {:noreply, state |> State.add_waiting_reply(id, from, nodes)}
