@@ -94,7 +94,14 @@ defmodule Roger.Partition.Consumer do
       |> Enum.map(fn q ->
         paused = MapSet.member?(state.paused, q.type)
         queue_name = Queue.make_name(state.partition_id, q.type)
-        {:ok, stats} = AMQP.Queue.declare(channel, queue_name, durable: true)
+
+        {:ok, stats} =
+          AMQP.Queue.declare(channel, queue_name,
+            durable: true,
+            arguments: [
+              {"x-queue-type", :longstr, "quorum"}
+            ]
+          )
 
         {q.type,
          %{
@@ -337,7 +344,14 @@ defmodule Roger.Partition.Consumer do
   defp consume(queue, state) do
     queue_name = Queue.make_name(state.partition_id, queue.type)
     # FIXME: do something with stats?
-    {:ok, _stats} = AMQP.Queue.declare(queue.channel, queue_name, durable: true)
+    {:ok, _stats} =
+      AMQP.Queue.declare(queue.channel, queue_name,
+        durable: true,
+        arguments: [
+          {"x-queue-type", :longstr, "quorum"}
+        ]
+      )
+
     {:ok, consumer_tag} = AMQP.Basic.consume(queue.channel, queue_name)
 
     %Queue{
