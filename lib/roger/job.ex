@@ -40,7 +40,7 @@ defmodule Roger.Job do
 
   @type t :: %__MODULE__{}
 
-  @derive {Poison.Encoder, only: ~w(id module args queue_key execution_key retry_count started_at queued_at)a}
+  @derive {Jason.Encoder, only: ~w(id module args queue_key execution_key retry_count started_at queued_at)a}
   defstruct id: nil,
             module: nil,
             args: nil,

@@ -49,7 +49,7 @@ defmodule Roger.Mixfile do
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:singleton, "~> 1.0"},
       {:gproc, "~> 0.6"},
-      {:poison, "~> 2.1 or ~> 3.0 or ~> 4.0"},
+      {:jason, "~> 1.3"},
       {:ex_doc, "~> 0.12", only: :dev},
       {:inch_ex, ">= 0.0.0", only: :docs},
       {:credo, ">= 0.0.0", only: :dev}
