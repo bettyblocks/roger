@@ -96,12 +96,7 @@ defmodule Roger.Partition.Consumer do
         queue_name = Queue.make_name(state.partition_id, q.type)
 
         {:ok, stats} =
-          AMQP.Queue.declare(channel, queue_name,
-            durable: true,
-            arguments: [
-              {"x-queue-type", :longstr, "quorum"}
-            ]
-          )
+          AMQP.Queue.declare(channel, queue_name, durable: true, arguments: [{"x-queue-type", :longstr, "quorum"}])
 
         {q.type,
          %{
