@@ -4,7 +4,9 @@ config :amqp,
   connections: [
     roger_conn: [
       host: "127.0.0.1",
-      port: 5672
+      port: 5672,
+      username: "guest",
+      password: "guest"
     ]
   ],
   channels: [
