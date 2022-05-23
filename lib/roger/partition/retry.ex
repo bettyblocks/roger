@@ -73,7 +73,7 @@ defmodule Roger.Partition.Retry do
          arguments ++ [{"x-expires", expiration * 1000 + 2000}]}
       end
 
-    {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, durable: true, arguments: arguments)
+    {:ok, _stats} = AMQP.Queue.declare(channel, queue_name, arguments: arguments)
     {queue_name, expiration}
   end
 end

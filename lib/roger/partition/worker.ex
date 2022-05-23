@@ -282,8 +282,7 @@ defmodule Roger.Partition.Worker do
     bare_name = "execution-waiting-#{job.execution_key}"
     name = Queue.make_name(state.partition_id, bare_name)
 
-    {:ok, _} =
-      AMQP.Queue.declare(state.channel, name, durable: true, arguments: [{"x-expires", @execution_waiting_expiry}])
+    {:ok, _} = AMQP.Queue.declare(state.channel, name, arguments: [{"x-expires", @execution_waiting_expiry}])
 
     case return do
       :prefixed -> name

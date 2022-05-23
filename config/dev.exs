@@ -4,7 +4,10 @@ config :amqp,
   connections: [
     roger_conn: [
       host: "localhost",
-      port: 5672
+      port: 5672,
+      username: "user",
+      password: "password",
+      virtual_host: "/dev"
     ]
   ],
   channels: [
