@@ -202,6 +202,6 @@ defmodule Roger.Partition do
   end
 
   defp get_predefined_apps() do
-    :application.get_env(:roger, :partitions, [])
+    Application.get_env(:roger, :partitions, []) || []
   end
 end
