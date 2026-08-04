@@ -4,8 +4,8 @@ defmodule Roger.Mixfile do
   def project do
     [
       app: :roger,
-      version: "3.2.1",
-      elixir: ">= 1.9.0",
+      version: "4.0.0",
+      elixir: ">= 1.16.0",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -45,10 +45,10 @@ defmodule Roger.Mixfile do
   # Dependencies
   defp deps do
     [
-      {:amqp, "~> 2.0 or ~> 3.0"},
+      {:amqp, "~> 2.0 or ~> 3.0 or ~> 4.0"},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:singleton, "~> 1.0"},
-      {:gproc, "~> 0.6"},
+      {:gproc, "~> 1.3"},
       {:jason, "~> 1.3"},
       {:ex_doc, "~> 0.12", only: :dev},
       {:inch_ex, ">= 0.0.0", only: :docs},
