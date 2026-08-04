@@ -17,18 +17,21 @@ defmodule Roger.Job.UniqueExecutionTest do
     end
   end
 
-  defp receive_list([]), do: :ok
+  # Collect the jobs that ran, asserting along the way that a job always
+  # finishes before the next one starts.
+  defp receive_sequentially(0), do: []
 
-  defp receive_list([msg | rest]) do
+  defp receive_sequentially(count) do
     receive do
-      ^msg ->
-        receive_list(rest)
-
-      _other ->
-        receive_list([msg | rest])
+      {:start, msg} ->
+        receive do
+          {:stop, ^msg} -> [msg | receive_sequentially(count - 1)]
+          other -> flunk("job #{msg} overlapped with #{inspect(other)}")
+        after
+          2_000 -> flunk("job #{msg} never finished")
+        end
     after
-      1000 ->
-        :error
+      5_000 -> flunk("expected #{count} more job(s) to run")
     end
   end
 
@@ -40,16 +43,15 @@ defmodule Roger.Job.UniqueExecutionTest do
     # Process.register(self(), Roger.Job.UniqueExecutionTest)
     # {:ok, _pid} = Roger.Partition.start(@app, [default: 10])
 
-    {:ok, job} = Roger.Job.create(MyJob, 1)
-    :ok = Roger.Job.enqueue(job, @app)
-    :timer.sleep(1)
-    {:ok, job} = Roger.Job.create(MyJob, 2)
-    :ok = Roger.Job.enqueue(job, @app)
-    :timer.sleep(1)
-    {:ok, job} = Roger.Job.create(MyJob, 3)
-    :ok = Roger.Job.enqueue(job, @app)
-    :timer.sleep(1)
+    for msg <- [1, 2, 3] do
+      {:ok, job} = Roger.Job.create(MyJob, msg)
+      :ok = Roger.Job.enqueue(job, @app)
+      :timer.sleep(1)
+    end
 
-    assert :ok == receive_list(start: 1, stop: 1, start: 2, stop: 2, start: 3, stop: 3)
+    # The jobs that got parked on the execution key are requeued by separate
+    # worker processes, so the order in which they resume is not defined -
+    # only that they never run at the same time.
+    assert [1, 2, 3] == receive_sequentially(3) |> Enum.sort()
   end
 end

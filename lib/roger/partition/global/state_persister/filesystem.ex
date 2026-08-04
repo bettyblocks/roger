@@ -18,7 +18,7 @@ defmodule Roger.Partition.Global.StatePersister.Filesystem do
 
   @behaviour StatePersister
 
-  @storage_dir Application.get_env(:roger, __MODULE__, [])[:path] || "/tmp"
+  @storage_dir Application.compile_env(:roger, __MODULE__, [])[:path] || "/tmp"
 
   def init(_id) do
     :ok

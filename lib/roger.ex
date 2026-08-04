@@ -29,6 +29,7 @@ defmodule Roger do
     import Supervisor.Spec, warn: false
 
     children = [
+      {Singleton.Supervisor, name: Roger.Singleton, max_restarts: 100},
       Roger.System,
       Roger.ApplySystem,
       Roger.PartitionSupervisor,

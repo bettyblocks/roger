@@ -154,7 +154,7 @@ defmodule Roger.Partition do
   defp start_partition(id, queues, state) do
     if System.connected?() && System.active?() do
       # make sure a statemanager instance is running
-      Singleton.start_child(Global, [id], {:app_global, id})
+      Singleton.start_child(Roger.Singleton, Global, [id], {:app_global, id})
       # start partition supervision tree
       pid =
         case Roger.PartitionSupervisor.start_child(id) do
@@ -192,7 +192,7 @@ defmodule Roger.Partition do
     case Roger.GProc.whereis({:app_supervisor, id}) do
       pid when is_pid(pid) ->
         :ok = Consumer.force_shutdown(id)
-        :ok = Singleton.stop_child(Global, [id])
+        :ok = Singleton.stop_child(Roger.Singleton, Global, [id])
         :ok = Roger.PartitionSupervisor.stop_child(pid)
         {:ok, %State{state | monitored: Map.delete(state.monitored, pid)}}
 

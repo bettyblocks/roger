@@ -41,9 +41,20 @@ defmodule Roger.ApplySystem do
     GenServer.call(__MODULE__, {:cast, Command.new(command, args)})
   end
 
+  @doc """
+  Return whether the node is connected to the AMQP broker
+  """
+  def connected? do
+    GenServer.call(__MODULE__, :is_connected)
+  end
+
   def init([]) do
     Process.flag(:trap_exit, true)
     {:ok, %State{}, 0}
+  end
+
+  def handle_call(:is_connected, _from, state) do
+    {:reply, state.channel != nil, state}
   end
 
   def handle_call(_, _, %State{channel: nil} = state) do
@@ -91,7 +102,7 @@ defmodule Roger.ApplySystem do
         dispatch_command(command, state)
       catch
         e ->
-          Logger.warn("#{inspect(e)}")
+          Logger.warning("#{inspect(e)}")
       end
 
     payload = :erlang.term_to_binary({node(), reply})
@@ -109,11 +120,20 @@ defmodule Roger.ApplySystem do
     {:noreply, state |> State.check_node_reply(meta.correlation_id, from_node, reply)}
   end
 
+  # A channel died while we were still (re)connecting; a retry is already scheduled.
+  def handle_info({:DOWN, _ref, :process, _pid, _}, %State{channel: nil} = state) do
+    {:noreply, state}
+  end
+
   def handle_info({:DOWN, _ref, :process, _pid, _}, state) do
     # try again if the AMQP client is back up
     close_channel(state)
     Process.send_after(self(), :timeout, 1000)
     {:noreply, %State{state | channel: nil}}
+  end
+
+  def handle_info({:EXIT, _, _reason}, %State{channel: nil} = state) do
+    {:noreply, state}
   end
 
   def handle_info({:EXIT, _, reason}, state) do
@@ -127,23 +147,12 @@ defmodule Roger.ApplySystem do
     close_channel(state)
 
     with {:ok, amqp_conn} <- AMQP.Application.get_connection(connection_name),
-         {:ok, channel} <- AMQP.Channel.open(amqp_conn) do
-      Process.monitor(channel.pid)
-      Process.link(channel.pid)
-      # Fanout / pubsub setup
-      :ok = Exchange.declare(channel, system_exchange_name(), :fanout)
-      {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
-      Queue.bind(channel, info.queue, system_exchange_name())
-      {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
-
-      # reply queue
-      {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
-
-      {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
-
-      {:noreply, %State{state | channel: channel, reply_queue: info.queue}}
+         {:ok, channel} <- AMQP.Channel.open(amqp_conn),
+         {:ok, reply_queue} <- setup_channel(channel) do
+      {:noreply, %State{state | channel: channel, reply_queue: reply_queue}}
     else
-      {:error, error} when error in [:not_connected, :closing] ->
+      {:error, reason} ->
+        Logger.debug("Roger.ApplySystem is not connected yet: #{inspect(reason)}")
         # try again if the AMQP client is back up
         Process.send_after(self(), :timeout, 1000)
         {:noreply, %State{state | channel: nil, reply_queue: nil}}
@@ -152,10 +161,38 @@ defmodule Roger.ApplySystem do
 
   def terminate(_reason, state), do: close_channel(state)
 
+  # Declare the fanout exchange plus this node's private queues. Those
+  # queues are exclusive and named after the node, so right after a
+  # reconnect the broker may not have released the ones from the
+  # previous connection yet. It answers such a redeclaration with
+  # RESOURCE_LOCKED, which closes the channel and makes the calls below
+  # exit; retrying a moment later is all that is needed.
+  defp setup_channel(channel) do
+    Process.monitor(channel.pid)
+    Process.link(channel.pid)
+    # Fanout / pubsub setup
+    :ok = Exchange.declare(channel, system_exchange_name(), :fanout)
+    {:ok, info} = Queue.declare(channel, node_name(), exclusive: true)
+    Queue.bind(channel, info.queue, system_exchange_name())
+    {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
+
+    # reply queue
+    {:ok, info} = Queue.declare(channel, reply_node_name(), exclusive: true)
+    {:ok, _} = AMQP.Basic.consume(channel, info.queue, nil, no_ack: true)
+
+    {:ok, info.queue}
+  catch
+    :exit, reason ->
+      close_channel(%State{channel: channel})
+      {:error, reason}
+  end
+
   defp close_channel(%{channel: %{pid: pid} = channel}) do
     if Process.alive?(pid) do
       AMQP.Channel.close(channel)
     end
+  catch
+    :exit, _reason -> nil
   end
 
   defp close_channel(_), do: nil
@@ -173,7 +210,7 @@ defmodule Roger.ApplySystem do
   end
 
   defp dispatch_command({command, args}, _state) do
-    Logger.warn("Received unknown command: #{inspect(command)} #{inspect(args)}")
+    Logger.warning("Received unknown command: #{inspect(command)} #{inspect(args)}")
     {:error, :unknown_command}
   end
 

@@ -12,22 +12,39 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
 
+    env:
+      # RabbitMQ only lets the default `guest` user connect over loopback, and
+      # the service container is reached over a published port, so the tests
+      # authenticate as the dedicated user created below instead.
+      RABBITMQ_USERNAME: roger
+      RABBITMQ_PASSWORD: roger
+
+    services:
+      rabbitmq:
+        image: rabbitmq:4.1-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: roger
+          RABBITMQ_DEFAULT_PASS: roger
+        ports:
+          - 5672:5672
+        # The job's steps do not start until this reports healthy, so the suite
+        # never races the broker's listeners coming up.
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_port_connectivity"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 30s
+
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
     - name: Set up Elixir
-      uses: erlef/setup-elixir@v1
+      uses: erlef/setup-beam@v1
       with:
-        elixir-version: '1.10.3' # Define the elixir version [required]
-        otp-version: '22.3' # Define the OTP version [required]
-    - name: Set up rabbitmq
-      uses: getong/rabbitmq-action@v1.2
-      with:
-        rabbitmq version: '3.8.2-management-alpine'
-        host port: 5672
-        rabbitmq user: 'guest'
-        rabbitmq password: 'guest'
+        elixir-version: '1.16.3' # Define the elixir version [required]
+        otp-version: '26.2' # Define the OTP version [required]
     - name: Restore dependencies cache
-      uses: actions/cache@v2
+      uses: actions/cache@v6
       with:
         path: deps
         key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
@@ -35,6 +52,6 @@ jobs:
     - name: Install dependencies
       run: mix deps.get
     - name: Run tests
-      run: mix test  
+      run: mix test
     - name: Run dialyzer
-      run: mix dialyzer  
+      run: mix dialyzer

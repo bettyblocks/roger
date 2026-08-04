@@ -5,7 +5,7 @@ defmodule Roger.ShutdownHandler do
   """
 
   @shutdown_overflow 10_000
-  @shutdown_timeout Application.get_env(:roger, :shutdown_timeout, 15_000) + @shutdown_overflow
+  @shutdown_timeout Application.compile_env(:roger, :shutdown_timeout, 15_000) + @shutdown_overflow
   use GenServer, restart: :transient, shutdown: @shutdown_timeout
 
   require Logger
@@ -61,7 +61,7 @@ defmodule Roger.ShutdownHandler do
         |> await_workers(timer)
 
       {:timeout, ^timer, :end_of_grace_period} ->
-        Logger.warn("Terminated #{MapSet.size(worker_pids)} jobs because it took longer then termination timeout.")
+        Logger.warning("Terminated #{MapSet.size(worker_pids)} jobs because it took longer then termination timeout.")
         :ok
     end
   end
