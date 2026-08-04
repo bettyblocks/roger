@@ -17,9 +17,19 @@ defmodule Roger.NodeInfo do
   """
   def running_partitions() do
     for {:app_supervisor, id} <- Roger.GProc.find_names({:app_supervisor, :_}) do
-      {id, Consumer.get_queues(id)}
+      {id, queues_of(id)}
     end
+    |> Enum.reject(fn {_id, queues} -> queues == nil end)
     |> Enum.into(%{})
+  end
+
+  # A partition that is shutting down can still have its supervisor registered
+  # while its consumer is already gone. Such a partition is not running
+  # anymore, so leave it out instead of failing the whole call.
+  defp queues_of(partition_id) do
+    Consumer.get_queues(partition_id)
+  catch
+    :exit, _reason -> nil
   end
 
   @doc """

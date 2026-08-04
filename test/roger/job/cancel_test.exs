@@ -53,7 +53,10 @@ defmodule Roger.Job.CancelTest do
 
     def perform(_) do
       send(Roger.Job.CancelTest, :job_running)
-      :timer.sleep(200)
+      # Sleep longer than the window the test waits for the cancel in, so
+      # the job cannot finish on its own before the cancel command has
+      # travelled through the broker and back.
+      :timer.sleep(5_000)
     end
   end
 

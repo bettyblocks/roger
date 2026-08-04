@@ -2,6 +2,35 @@ defmodule Roger.AppCase do
   @moduledoc false
   use ExUnit.CaseTemplate
 
+  @doc """
+  Block until Roger's system channels are up.
+
+  Some tests drop the AMQP connection on purpose, and both `Roger.System`
+  and `Roger.ApplySystem` need a moment to redeclare their queues
+  afterwards. Commands cast over those channels are silently dropped
+  while they are down, which would make the next test fail for reasons
+  that have nothing to do with what it is testing.
+  """
+  def await_connected(tries \\ 200) do
+    cond do
+      connected?(Roger.System) and connected?(Roger.ApplySystem) ->
+        :ok
+
+      tries == 0 ->
+        {:error, :not_connected}
+
+      true ->
+        :timer.sleep(25)
+        await_connected(tries - 1)
+    end
+  end
+
+  defp connected?(mod) do
+    mod.connected?()
+  catch
+    :exit, _reason -> false
+  end
+
   using(opts) do
     queues = opts[:queues] || [default: 10]
 
@@ -13,6 +42,7 @@ defmodule Roger.AppCase do
 
       setup do
         Process.register(self(), unquote(__CALLER__.module))
+        :ok = Roger.AppCase.await_connected()
         {:ok, _pid} = Partition.start(@app, unquote(queues))
 
         Application.put_env(:roger, :callbacks, unquote(opts)[:callbacks] || nil)

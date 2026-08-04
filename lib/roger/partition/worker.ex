@@ -45,10 +45,17 @@ defmodule Roger.Partition.Worker do
             raw_payload: binary,
             channel: AMQP.Channel.t(),
             worker_task_pid: pid,
-            job: Job.t()
+            job: Job.t(),
+            cancelling: boolean
           }
 
-    defstruct partition_id: nil, meta: nil, raw_payload: nil, channel: nil, worker_task_pid: nil, job: nil
+    defstruct partition_id: nil,
+              meta: nil,
+              raw_payload: nil,
+              channel: nil,
+              worker_task_pid: nil,
+              job: nil,
+              cancelling: false
   end
 
   def init([partition_id, channel, payload, meta]) do
@@ -129,18 +136,32 @@ defmodule Roger.Partition.Worker do
     {:stop, :normal, state}
   end
 
-  #  This handle a hard crash
+  #  The task we killed on cancellation going down is not a crash.
   @spec handle_info({:DOWN, reference(), :process, pid(), String.t()}, State.t()) :: {:stop, :normal, State.t()}
+  def handle_info({:DOWN, _ref, :process, _child, _reason}, %State{cancelling: true} = state) do
+    cancel_running_job(state)
+    {:stop, :normal, state}
+  end
+
+  #  This handle a hard crash
   def handle_info({:DOWN, _ref, :process, _child, reason}, state) do
     handle_error(state.job, {:worker_crash, reason}, nil, state, nil)
     {:stop, :normal, state}
   end
 
   #  This is called when job needs to be cancelled it kills running job and runs the timeout task to correctly finish the job.
+  #  Killing the task makes both a :DOWN message and the timeout below race
+  #  each other, so the state is flagged to make sure the job is finished off
+  #  as cancelled either way.
   @spec handle_call(:cancel_job, any(), State.t()) :: {:reply, :ok, State.t(), 0}
   def handle_call(:cancel_job, _source, state) do
     Process.exit(state.worker_task_pid, :kill)
-    {:reply, :ok, state, 0}
+    {:reply, :ok, %State{state | cancelling: true}, 0}
+  end
+
+  defp cancel_running_job(state) do
+    Global.cancelled?(state.partition_id, state.job.id, :remove)
+    job_cancel(state.job, state)
   end
 
   defp execute_job(job, state, parent) do
@@ -282,7 +303,11 @@ defmodule Roger.Partition.Worker do
     bare_name = "execution-waiting-#{job.execution_key}"
     name = Queue.make_name(state.partition_id, bare_name)
 
-    {:ok, _} = AMQP.Queue.declare(state.channel, name, arguments: [{"x-expires", @execution_waiting_expiry}])
+    {:ok, _} =
+      AMQP.Queue.declare(state.channel, name,
+        durable: true,
+        arguments: [{"x-expires", @execution_waiting_expiry}]
+      )
 
     case return do
       :prefixed -> name

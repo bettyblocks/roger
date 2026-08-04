@@ -11,9 +11,8 @@ defmodule Roger.PartitionTest do
     assert has_test_app(NodeInfo.running_partitions())
 
     :ok = Partition.stop(@app)
-    :timer.sleep(50)
 
-    assert !has_test_app(NodeInfo.running_partitions())
+    assert await(fn -> !has_test_app(NodeInfo.running_partitions()) end)
   end
 
   test "automatic restart after supervisor stop" do
@@ -21,16 +20,19 @@ defmodule Roger.PartitionTest do
 
     :ok = PartitionSupervisor.stop_child(pid)
 
-    :timer.sleep(50)
+    assert await(fn ->
+             !has_test_app(NodeInfo.running_partitions()) and
+               has_test_app(NodeInfo.waiting_partitions())
+           end)
 
-    assert !has_test_app(NodeInfo.running_partitions())
-    assert has_test_app(NodeInfo.waiting_partitions())
-
-    :timer.sleep(4000)
     # it restarts
-
-    assert has_test_app(NodeInfo.running_partitions())
-    assert !has_test_app(NodeInfo.waiting_partitions())
+    assert await(
+             fn ->
+               has_test_app(NodeInfo.running_partitions()) and
+                 !has_test_app(NodeInfo.waiting_partitions())
+             end,
+             8_000
+           )
 
     :ok = Partition.stop(@app)
   end
@@ -48,5 +50,17 @@ defmodule Roger.PartitionTest do
 
   defp has_test_app(apps) do
     apps[@app] != nil
+  end
+
+  # Partitions start and stop asynchronously, so poll for the expected state
+  # instead of assuming a fixed amount of time is always enough.
+  defp await(fun, timeout \\ 1_000) do
+    cond do
+      fun.() -> true
+      timeout <= 0 -> false
+      true ->
+        :timer.sleep(25)
+        await(fun, timeout - 25)
+    end
   end
 end

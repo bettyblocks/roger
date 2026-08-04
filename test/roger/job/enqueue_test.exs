@@ -16,7 +16,9 @@ defmodule Roger.Job.EnqueueTest do
     {:ok, job} = Job.create(MyCalculation, [2])
     :ok = Job.enqueue(job, @app)
 
-    assert_receive 4
+    # A quorum queue needs to replicate the job before it is handed to a
+    # worker, which takes more than the 100ms assert_receive defaults to.
+    assert_receive 4, 2_000
   end
 
   test "non-unique jobs can be enqueued multiple times" do
@@ -24,7 +26,7 @@ defmodule Roger.Job.EnqueueTest do
     :ok = Job.enqueue(job, @app)
     :ok = Job.enqueue(job, @app)
 
-    assert_receive 4
-    assert_receive 4
+    assert_receive 4, 2_000
+    assert_receive 4, 2_000
   end
 end
