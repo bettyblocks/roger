@@ -153,25 +153,44 @@ defmodule Roger.Partition do
 
   defp start_partition(id, queues, state) do
     if System.connected?() && System.active?() do
-      # make sure a statemanager instance is running
-      Singleton.start_child(Roger.Singleton, Global, [id], {:app_global, id})
-      # start partition supervision tree
-      pid =
-        case Roger.PartitionSupervisor.start_child(id) do
-          {:ok, pid} ->
-            Logger.debug("Started Roger partition: #{id}")
-            pid
+      case start_global(id) do
+        :ok ->
+          start_partition_tree(id, queues, state)
 
-          {:error, {:already_started, pid}} ->
-            pid
-        end
+        {:error, reason} ->
+          Logger.error("Roger could not start the global state process for partition #{id}: #{inspect(reason)}.")
 
-      :ok = Consumer.reconfigure(id, queues)
-      _ref = Process.monitor(pid)
-      {{:ok, pid}, %State{state | monitored: Map.put(state.monitored, pid, {id, queues})}}
+          {{:error, reason}, %State{state | waiting: Map.put(state.waiting, id, {id, queues})}}
+      end
     else
       {:waiting, %State{state | waiting: Map.put(state.waiting, id, {id, queues})}}
     end
+  end
+
+  defp start_global(id) do
+    case Singleton.start_child(Roger.Singleton, Global, [id], {:app_global, id}) do
+      {:ok, _pid} -> :ok
+      {:ok, _pid, _info} -> :ok
+      {:error, {:already_started, _pid}} -> :ok
+      :ignore -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp start_partition_tree(id, queues, state) do
+    pid =
+      case Roger.PartitionSupervisor.start_child(id) do
+        {:ok, pid} ->
+          Logger.debug("Started Roger partition: #{id}")
+          pid
+
+        {:error, {:already_started, pid}} ->
+          pid
+      end
+
+    :ok = Consumer.reconfigure(id, queues)
+    _ref = Process.monitor(pid)
+    {{:ok, pid}, %State{state | monitored: Map.put(state.monitored, pid, {id, queues})}}
   end
 
   defp safe_stop_partition(id, state) do
