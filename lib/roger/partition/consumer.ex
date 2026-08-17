@@ -81,8 +81,17 @@ defmodule Roger.Partition.Consumer do
 
   def init([partition_id]) do
     Process.flag(:trap_exit, true)
-    {:ok, paused} = Global.queue_get_paused(partition_id)
-    {:ok, %State{partition_id: partition_id, paused: paused}}
+
+    case Global.queue_get_paused(partition_id) do
+      {:ok, paused} ->
+        {:ok, %State{partition_id: partition_id, paused: paused}}
+
+      {:error, :not_started} ->
+        {:stop,
+         {:global_state_not_started,
+          "The Roger.Partition.Global process for partition #{partition_id} is not running, " <>
+            "so the consumer cannot read which queues are paused."}}
+    end
   end
 
   def handle_call(:get_queues, _from, state) do
